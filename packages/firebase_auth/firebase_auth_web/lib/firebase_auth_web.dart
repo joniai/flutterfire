@@ -21,6 +21,7 @@ import 'utils.dart';
 class FirebaseAuthWeb extends FirebaseAuthPlatform {
   /// instance of Auth from the web plugin
   final firebase.Auth _webAuth;
+  firebase.RecaptchaVerifier _verifier;
 
   /// Called by PluginRegistry to register this plugin for Flutter Web
   static void registerWith(Registrar registrar) {
@@ -331,22 +332,22 @@ class FirebaseAuthWeb extends FirebaseAuthPlatform {
       window.document.documentElement.children
           .add(DivElement()..id = "recaptcha-container");
     }
-
-    firebase.RecaptchaVerifier verifier =
-    firebase.RecaptchaVerifier('recaptcha-container', {
-      'size': 'invisible',
-      'callback': (resp) {
-        print('reCAPTCHA solved, allow signInWithPhoneNumber.');
-      },
-      'expired-callback': () {
-        verificationFailed(Exception('reCAPTCHA expired'));
-      }
-    });
-    verifier.render();
+    if (_verifier == null) {
+      _verifier = firebase.RecaptchaVerifier('recaptcha-container', {
+        'size': 'invisible',
+        'callback': (resp) {
+          print('reCAPTCHA solved, allow signInWithPhoneNumber.');
+        },
+        'expired-callback': () {
+          verificationFailed(Exception('reCAPTCHA expired'));
+        }
+      });
+    }
+    _verifier.render();
     firebase.ConfirmationResult _confirmationResult;
     try {
       _confirmationResult =
-          await firebase.auth().signInWithPhoneNumber(phoneNumber, verifier);
+          await firebase.auth().signInWithPhoneNumber(phoneNumber, _verifier);
     } on FirebaseAuthException catch (e) {
       verificationFailed(e);
     } catch (error) {
