@@ -120,7 +120,6 @@ ignored. You can however explicially increase the priority by sending additional
 - On Android, set the `priority` field to `high`.
 - On Apple (iOS & MacOS), set the `content-available` field to `true`.
 
-
 Since the sending of FCM payloads is custom to your own setup, it is best to read the official [FCM API reference](https://firebase.google.com/docs/cloud-messaging/concept-options) for your chosen
 SDK.
 
@@ -171,7 +170,7 @@ and may cause the OS to terminate the process. If tasks run for longer than 60 s
 
 ## Topics
 
-Topics are a mechanism which allow a device to subscribe and unsubscribe from named PubSub channels, all managed via FCM. 
+Topics are a mechanism which allow a device to subscribe and unsubscribe from named PubSub channels, all managed via FCM.
 Rather than sending a message to a specific device by FCM token, you can instead send a message to a topic and any devices
 subscribed to that topic will receive the message.
 
@@ -200,4 +199,3 @@ To unsubscribe from a topic, call the [`unsubscribeFromTopic`](!cloud_messaging.
 ```dart
 await FirebaseMessaging.instance.unsubscribeFromTopic('weather');
 ```
-

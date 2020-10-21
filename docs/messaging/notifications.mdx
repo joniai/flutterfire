@@ -1,0 +1,111 @@
+---
+title: Notifications
+---
+
+# Notifications
+
+Notifications are an important tool used on the majority of applications, used to improve user experience, used to engage users 
+with your application and much more. The Cloud Messaging module provides basic support for displaying and handling notifications.
+
+## Displaying notifications
+
+FCM sends data payloads to applications, however by default those payloads *may* be handled by the platform silently. In some cases,
+this is will meet your requirements, however a very common use-case for FCM is to be able to display a physical notification to your 
+users. These notifications may be purely for informational purposes (displaying text & images), or allow for user interaction.
+
+When the FCM package is installed, any incoming messages which contain a `notification` property with a correct schema will automatically
+cause a notification to be displayed. These automatically created notifications support text, images and basic interaction. If you wish
+to create complex notifications, read the [Advanced Usage](#advanced-usage) documentation.
+
+:::info
+By default on Android & iOS, notifications are only displayed to users if the application is in the background or terminated. You can override
+this functionality by reading the [Advanced Usage](#advanced-usage) documentation.
+:::
+
+There are a number of ways to send a FCM payload with a `notification` property. Below we outline the most common use-cases.
+
+### Via Firebase Console
+
+The [Firebase Console](https://console.firebase.google.com/project/_/notification) provides a simple UI to allow devices to display a notification. Using the console, you can:
+
+- Send a basic notification with custom text and images.
+- Target applications which have been added to your project.
+- Schedule notifications to display at a later date.
+- Send recurring notifications.
+- Assign conversion events for your analytical tracking.
+- A/B test user interaction (called "experiments").
+- Test notifications on your development devices.
+
+The Firebase Console automatically sends a message to your devices containing a notification property which is handled by the Firebase Cloud Messaging package. 
+See [Handling Interaction](#handling-interaction) to learn about how to support user interaction.
+
+### Via Admin SDKs
+
+Using one of the [various Firebase Admin SDKs](https://firebase.google.com/docs/reference/admin), you can send customised data payloads to your devices from your own servers. 
+
+For example, when using the [`firebase-admin`] package in a Node.js environment to send messages from a server, a `notification` property can be added to the message payload:
+
+```js
+const admin = require('firebase-admin');
+
+await admin.messaging().sendMulticast({
+  tokens: [
+    'token_1', 'token_2',
+  ],
+  notification: {
+    title: 'Weather Warning!',
+    body: 'A new weather warning has been issued for your location.',
+    imageUrl: 'https://my-cdn.com/extreme-weather.png',
+  },
+});
+```
+
+To learn more about how to integrate Cloud Messaging with your own setup, read the [Server Integration](server-integration.mdx) documentation.
+
+### Via REST
+
+If you are unable to use a [Firebase Admin SDK](https://firebase.google.com/docs/reference/admin), Firebase also provides support for sending messages to devices via HTTP POST requests:
+
+```http
+POST https://fcm.googleapis.com/v1/projects/myproject-b5ae1/messages:send HTTP/1.1
+
+Content-Type: application/json
+Authorization: Bearer ya29.ElqKBGN2Ri_Uz...HnS_uNreA
+
+{
+   "message":{
+      "token":"token_1",
+      "data":{},
+      "notification":{
+        "title":"FCM Message"
+        "body":"This is an FCM notification message!",
+      }
+   }
+}
+```
+
+To learn more about the REST API, view the [Firebase documentation](https://firebase.google.com/docs/cloud-messaging/send-message#rest), and select the "REST" tab under the code examples.
+
+## Handling Interaction
+
+As mentioned above, by default on Android & iOS notifications are only displayed to users if the application is in the background or terminated. The default behaviour when
+a notification is pressed is to open your application.
+
+In most cases, you will want to hook onto this "open" event and perform some logic within your application. For example on a chat application, you'll want to open a specific
+conversation when a new message notification is pressed. The API provides two ways to handle interaction:
+
+1. `getInitialNotification()`: If the application is opened from a terminated state a `Future` containing a `RemoteMessage` will be returned.
+2. `onNotificationOpenedApp`: A `Stream` which posts a `RemoteMessage` when the application is opened from a background state.
+
+It is recommended that both scenarios are handled to ensure a smooth UX for your users. The code example below outlines how this can be achieved:
+
+```dart
+TODO
+```
+
+## Advanced Usage
+
+
+
+
+
