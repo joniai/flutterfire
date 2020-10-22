@@ -62,7 +62,8 @@ class FirebaseMessaging extends FirebasePluginPlatform {
   /// To handle messages whilst the app is in the background or terminated,
   /// see [onBackgroundMessage].
   static Stream<RemoteMessage> get onMessage {
-    Stream<RemoteMessage> onMessageStream = FirebaseMessagingPlatform.onMessage;
+    Stream<RemoteMessage> onMessageStream =
+        FirebaseMessagingPlatform.onMessage.stream;
 
     StreamController<RemoteMessage> streamController;
     streamController = StreamController<RemoteMessage>.broadcast(onListen: () {
@@ -72,62 +73,21 @@ class FirebaseMessaging extends FirebasePluginPlatform {
     return streamController.stream;
   }
 
-  /// Returns a Stream that is called when a message being sent to FCM (via [sendMessage])
-  /// has successfully been sent or fails.
-  ///
-  /// The Stream contains a [String] representing a message ID. If sending failed,
-  /// the [SentMessage] will contain an [error] property containing a [FirebaseException].
-  ///
-  /// See [onSendError] to handle sending failures.
-  static Stream<SentMessage> get onMessageSent {
-    Stream<SentMessage> onMessageSentStream =
-        FirebaseMessagingPlatform.onMessageSent;
-
-    StreamController<SentMessage> streamController;
-    streamController = StreamController<SentMessage>.broadcast(onListen: () {
-      onMessageSentStream.pipe(streamController);
-    });
-
-    return streamController.stream;
-  }
-
-  /// Returns a [Stream] that is called when a user presses a notification displayed
+  /// Returns a [Stream] that is called when a user presses a notification message displayed
   /// via FCM.
   ///
   /// A Stream event will be sent if the app has opened from a background state
   /// (not terminated).
   ///
   /// If your app is opened via a notification whilst the app is terminated,
-  /// see [initialNotification].
-  static Stream<RemoteMessage> get onNotificationOpenedApp {
-    Stream<RemoteMessage> onNotificationOpenedAppStream =
-        FirebaseMessagingPlatform.onNotificationOpenedApp;
+  /// see [getInitialMessage].
+  static Stream<RemoteMessage> get onMessageOpenedApp {
+    Stream<RemoteMessage> onMessageOpenedAppStream =
+        FirebaseMessagingPlatform.onMessageOpenedApp.stream;
 
     StreamController<RemoteMessage> streamController;
     streamController = StreamController<RemoteMessage>.broadcast(onListen: () {
-      onNotificationOpenedAppStream.pipe(streamController);
-    });
-
-    return streamController.stream;
-  }
-
-  /// Returns a Stream which is called when the FCM server deletes pending messages.
-  ///
-  /// This may be due to:
-  ///
-  /// 1.  Too many messages stored on the FCM server. This can occur when an
-  /// app's servers sends many non-collapsible messages to FCM servers while
-  /// the device is offline.
-  ///
-  /// 2. he device hasn't connected in a long time and the app server has recently
-  /// (within the last 4 weeks) sent a message to the app on that device.
-  static Stream<void> get onDeletedMessages {
-    Stream<void> onDeletedMessagesStream =
-        FirebaseMessagingPlatform.onDeletedMessages;
-
-    StreamController<void> streamController;
-    streamController = StreamController<void>.broadcast(onListen: () {
-      onDeletedMessagesStream.pipe(streamController);
+      onMessageOpenedAppStream.pipe(streamController);
     });
 
     return streamController.stream;
@@ -154,32 +114,24 @@ class FirebaseMessaging extends FirebasePluginPlatform {
     return _delegate.isAutoInitEnabled;
   }
 
-  /// If the application has been opened from a terminated state via a [Notification],
-  /// it will be returned, otherwise it will be `null`.
+  /// If the application has been opened from a terminated state via a [RemoteMessage]
+  /// (containing a [Notification]), it will be returned, otherwise it will be `null`.
   ///
-  /// Once the [Notification] has been consumed, it will be removed and further
-  /// calls to [initialNotification] will be `null`.
+  /// Once the [RemoteMesage] has been consumed, it will be removed and further
+  /// calls to [getInitialMessage] will be `null`.
   ///
   /// This should be used to determine whether specific notification interaction
   /// should open the app with a specific purpose (e.g. opening a chat message,
   /// specific screen etc).
-  Notification get initialNotification {
-    return _delegate.initialNotification;
+  Future<RemoteMessage> getInitialMessage() {
+    return _delegate.getInitialMessage();
   }
 
-  /// Removes access to an FCM token previously authorized by it's scope.
+  /// Removes access to an FCM token previously authorized with optional [senderId].
   ///
   /// Messages sent by the server to this token will fail.
-  /// authorizedEntity The messaging sender ID. In most cases this will be the current default app.
-  /// scope The scope to assign when token will be deleted.
-  Future<void> deleteToken({
-    String authorizedEntity,
-    String scope,
-  }) {
-    return _delegate.deleteToken(
-      authorizedEntity: authorizedEntity ?? app.options.messagingSenderId,
-      scope: scope ?? 'FCM',
-    );
+  Future<void> deleteToken() {
+    return _delegate.deleteToken();
   }
 
   /// On iOS, it is possible to get the users APNs token.
@@ -192,18 +144,11 @@ class FirebaseMessaging extends FirebasePluginPlatform {
     return _delegate.getAPNSToken();
   }
 
-  /// Returns an FCM token for this device.
-  ///
-  /// Optionally you can specify a custom authorized entity or scope to tailor
-  /// tokens to your own use-case.
+  /// Returns the default FCM token for this device and optionally a [senderId].
   Future<String> getToken({
-    String authorizedEntity,
-    String scope,
     String vapidKey,
   }) {
     return _delegate.getToken(
-      authorizedEntity: authorizedEntity ?? app.options.messagingSenderId,
-      scope: scope ?? 'FCM',
       vapidKey: vapidKey,
     );
   }
@@ -314,18 +259,6 @@ class FirebaseMessaging extends FirebasePluginPlatform {
         status == AuthorizationStatus.provisional;
   }
 
-  /// On Apple platforms, if your app wants to receive remote messages from FCM
-  /// (via APNs), you must explicitly register with APNs if auto-registration
-  /// has been disabled or [unregisterDeviceForRemoteMessages] has been called.
-  Future<void> registerDeviceForRemoteMessages() {
-    return _delegate.registerDeviceForRemoteMessages();
-  }
-
-  /// Unregisters the app from receiving remote notifications.
-  Future<void> unregisterDeviceForRemoteMessages() {
-    return _delegate.unregisterDeviceForRemoteMessages();
-  }
-
   /// Send a new [RemoteMessage] to the FCM server.
   Future<void> sendMessage({
     String senderId,
@@ -353,6 +286,37 @@ class FirebaseMessaging extends FirebasePluginPlatform {
   Future<void> setAutoInitEnabled(bool enabled) async {
     assert(enabled != null);
     return _delegate.setAutoInitEnabled(enabled);
+  }
+
+  /// Sets the presentation options for Apple notifications when received in
+  /// the foreground.
+  ///
+  /// By default, on Apple devices notification messages are only shown when
+  /// the application is in the background or terminated. Calling this method
+  /// updates these options to allow customizing notification presentation behaviour whilst
+  /// the application is in the foreground.
+  ///
+  /// Important: The requested permissions and those set by the user take priority
+  /// over these settings.
+  ///
+  /// - [alert] Causes a notification message to display in the foreground, overlaying
+  ///   the current application (heads up mode).
+  /// - [badge] The application badge count will be updated if the application is
+  ///   in the foreground.
+  /// - [sound] The device will trigger a sound if the application is in the foreground.
+  ///
+  /// If all arguments are `false` or are omitted, a notification will not be displayed in the
+  /// foreground, however you will still receive events relating to the notification.
+  Future<void> setForegroundNotificationPresentationOptions({
+    bool alert = false,
+    bool badge = false,
+    bool sound = false,
+  }) {
+    return _delegate.setForegroundNotificationPresentationOptions(
+      alert: alert,
+      badge: badge,
+      sound: sound,
+    );
   }
 
   /// Subscribe to topic in background.

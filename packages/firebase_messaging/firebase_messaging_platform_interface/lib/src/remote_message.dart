@@ -4,7 +4,9 @@
 
 import 'package:firebase_messaging_platform_interface/firebase_messaging_platform_interface.dart';
 
+/// A class representing a message sent from Firebase Cloud Messaging.
 class RemoteMessage {
+  // ignore: public_member_api_docs
   const RemoteMessage(
       {this.senderId,
       this.category,
@@ -20,6 +22,32 @@ class RemoteMessage {
       this.threadId,
       this.ttl});
 
+  /// Constructs a [RemoteMessage] from a raw Map.
+  factory RemoteMessage.fromMap(Map<String, dynamic> map) {
+    return RemoteMessage(
+      senderId: map['senderId'],
+      category: map['category'],
+      collapseKey: map['collapseKey'],
+      contentAvailable: map['contentAvailable'] ?? false,
+      data: map['data'] == null
+          ? <String, String>{}
+          : Map<String, String>.from(map['data']),
+      from: map['from'],
+      messageId: map['messageId'],
+      mutableContent: map['mutableContent'] ?? false,
+      notification: map['notification'] == null
+          ? null
+          : RemoteNotification.fromMap(
+              Map<String, dynamic>.from(map['notification'])),
+      sentTime: map['sentTime'] == null
+          ? null
+          : DateTime.fromMillisecondsSinceEpoch(map['sentTime']),
+      threadId: map['threadId'],
+      ttl: map['ttl'],
+    );
+  }
+
+  /// The ID of the upstream sender location.
   final String senderId;
 
   /// The iOS category this notification is assigned to.
@@ -47,8 +75,8 @@ class RemoteMessage {
   /// allowing the app to modify the notification via app extensions.
   final bool mutableContent;
 
-  /// Additional Notification data sent with the message
-  final Notification notification;
+  /// Additional Notification data sent with the message.
+  final RemoteNotification notification;
 
   /// The time the message was sent, represented as a [DateTime].
   final DateTime sentTime;

@@ -101,23 +101,20 @@ void main() {
     });
 
     group('setInitialValues()', () {
-      test('when initialNotification arg is not null', () {
-        final testMessaging =
-            TestMethodChannelFirebaseMessaging(Firebase.app());
-        final result = testMessaging.setInitialValues(
-            isAutoInitEnabled: false, initialNotification: kMockNotification);
-        expect(result, isA<FirebaseMessagingPlatform>());
-        expect(result.isAutoInitEnabled, isFalse);
-        expect(result.initialNotification, isA<Notification>());
-      });
-
-      test('when initialNotification arg is null', () {
+      test('when isAutoInitEnabled is false', () {
         final testMessaging =
             TestMethodChannelFirebaseMessaging(Firebase.app());
         final result = testMessaging.setInitialValues(isAutoInitEnabled: false);
         expect(result, isA<FirebaseMessagingPlatform>());
         expect(result.isAutoInitEnabled, isFalse);
-        expect(result.initialNotification, isNull);
+      });
+
+      test('when isAutoInitEnabled is true', () {
+        final testMessaging =
+            TestMethodChannelFirebaseMessaging(Firebase.app());
+        final result = testMessaging.setInitialValues(isAutoInitEnabled: true);
+        expect(result, isA<FirebaseMessagingPlatform>());
+        expect(result.isAutoInitEnabled, isTrue);
       });
     });
 
@@ -125,15 +122,6 @@ void main() {
       // ignore: invalid_use_of_protected_member
       messaging.setInitialValues(isAutoInitEnabled: true);
       expect(messaging.isAutoInitEnabled, isTrue);
-    });
-
-    test('initialNotification', () {
-      // ignore: invalid_use_of_protected_member
-      messaging.setInitialValues(initialNotification: kMockNotification);
-      final initialNotification = messaging.initialNotification;
-      expect(initialNotification, isA<Notification>());
-      // should now be null, since notification has been read
-      expect(messaging.initialNotification, isNull);
     });
 
     test('deleteToken', () async {
@@ -216,28 +204,6 @@ void main() {
       ]);
     });
 
-    test('sendMessage', () async {
-      await messaging.sendMessage();
-
-      // check native method was called
-      expect(log, <Matcher>[
-        isMethodCall(
-          'Messaging#sendMessage',
-          arguments: <String, dynamic>{
-            'appName': defaultFirebaseAppName,
-            'message': <String, dynamic>{
-              'senderId': null,
-              'data': null,
-              'collapseKey': null,
-              'messageId': null,
-              'messageType': null,
-              'ttl': null,
-            }
-          },
-        ),
-      ]);
-    });
-
     test('setAutoInitEnabled', () async {
       expect(messaging.isAutoInitEnabled, isNull);
       await messaging.setAutoInitEnabled(true);
@@ -286,20 +252,6 @@ void main() {
           arguments: <String, dynamic>{
             'appName': defaultFirebaseAppName,
             'topic': topic,
-          },
-        ),
-      ]);
-    });
-
-    test('deleteInstanceID', () async {
-      await messaging.deleteInstanceID();
-
-      // check native method was called
-      expect(log, <Matcher>[
-        isMethodCall(
-          'Messaging#deleteInstanceID',
-          arguments: <String, dynamic>{
-            'appName': defaultFirebaseAppName,
           },
         ),
       ]);

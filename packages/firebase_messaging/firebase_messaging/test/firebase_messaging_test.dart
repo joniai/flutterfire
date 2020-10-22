@@ -5,8 +5,8 @@
 import 'dart:async';
 
 import 'package:async/async.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_messaging_platform_interface/firebase_messaging_platform_interface.dart';
 import 'package:firebase_messaging_platform_interface/src/utils.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -18,14 +18,12 @@ void main() {
   setupFirebaseMessagingMocks();
   FirebaseMessaging messaging;
   FirebaseMessaging secondaryMessaging;
-  FirebaseApp app;
   FirebaseApp secondaryApp;
 
   group('$FirebaseMessaging', () {
     setUpAll(() async {
       FirebaseMessagingPlatform.instance = kMockMessagingPlatform;
 
-      app = await Firebase.initializeApp();
       secondaryApp = await Firebase.initializeApp(
           name: 'foo',
           options: FirebaseOptions(
@@ -83,33 +81,28 @@ void main() {
     });
 
     group('initialNotification', () {
-      test('verify delegate method is called', () {
-        const notificationTitle = 'test-notification';
-        Notification notification = Notification(title: notificationTitle);
-        when(kMockMessagingPlatform.initialNotification)
-            .thenReturn(notification);
+      test('verify delegate method is called', () async {
+        const senderId = 'test-notification';
+        RemoteMessage message = RemoteMessage(senderId: senderId);
+        when(kMockMessagingPlatform.getInitialMessage())
+            .thenReturn(Future.value(message));
 
-        // verify isAutoInitEnabled returns true
-        final result = messaging.initialNotification;
+        final result = await messaging.getInitialMessage();
 
-        expect(result, isA<Notification>());
-        expect(result.title, notificationTitle);
+        expect(result, isA<RemoteMessage>());
+        expect(result.senderId, senderId);
 
-        verify(kMockMessagingPlatform.initialNotification);
+        verify(kMockMessagingPlatform.getInitialMessage());
       });
     });
 
     group('deleteToken', () {
       test('verify delegate method is called with correct args', () async {
-        const authorizedEntity = 'test-authorizedEntity';
-        const scope = 'test-scope';
         when(kMockMessagingPlatform.deleteToken()).thenReturn(null);
 
-        await messaging.deleteToken(
-            authorizedEntity: authorizedEntity, scope: scope);
+        await messaging.deleteToken();
 
-        verify(kMockMessagingPlatform.deleteToken(
-            authorizedEntity: authorizedEntity, scope: scope));
+        verify(kMockMessagingPlatform.deleteToken());
       });
     });
 
@@ -126,24 +119,13 @@ void main() {
     });
     group('getToken', () {
       test('verify delegate method is called with correct args', () async {
-        const authorizedEntity = 'test-authorizedEntity';
-        const scope = 'test-scope';
         const vapidKey = 'test-vapid-key';
-        when(kMockMessagingPlatform.getToken(
-                authorizedEntity: anyNamed('authorizedEntity'),
-                scope: anyNamed('scope'),
-                vapidKey: anyNamed('vapidKey')))
+        when(kMockMessagingPlatform.getToken(vapidKey: anyNamed('vapidKey')))
             .thenReturn(null);
 
-        await messaging.getToken(
-            authorizedEntity: authorizedEntity,
-            scope: scope,
-            vapidKey: vapidKey);
+        await messaging.getToken(vapidKey: vapidKey);
 
-        verify(kMockMessagingPlatform.getToken(
-            authorizedEntity: authorizedEntity,
-            scope: scope,
-            vapidKey: vapidKey));
+        verify(kMockMessagingPlatform.getToken(vapidKey: vapidKey));
       });
     });
 
@@ -224,67 +206,7 @@ void main() {
             sound: true));
       });
     });
-    group('sendMessage', () {
-      var senderId = 'custom-sender@fcm.googleapis.com';
-      var data = <String, String>{'foo': 'bar'};
-      var collapseKey = 'collapse-key';
-      var messageId = 'message-id';
-      var messageType = 'message-type';
-      var ttl = 1;
 
-      setUpAll(() {
-        when(kMockMessagingPlatform.sendMessage(
-          senderId: anyNamed('senderId'),
-          data: anyNamed('data'),
-          collapseKey: anyNamed('collapseKey'),
-          messageId: anyNamed('messageId'),
-          messageType: anyNamed('messageType'),
-          ttl: anyNamed('ttl'),
-        )).thenAnswer((_) => null);
-      });
-      test('verify delegate method is called with correct args', () async {
-        await messaging.sendMessage(
-            senderId: senderId,
-            data: data,
-            collapseKey: collapseKey,
-            messageId: messageId,
-            messageType: messageType,
-            ttl: ttl);
-
-        verify(kMockMessagingPlatform.sendMessage(
-            senderId: senderId,
-            data: data,
-            collapseKey: collapseKey,
-            messageId: messageId,
-            messageType: messageType,
-            ttl: ttl));
-      });
-
-      test('senderId defaults to the correct value if not set', () async {
-        var defaultSenderId =
-            '${app.options.messagingSenderId}@fcm.googleapis.com';
-
-        await messaging.sendMessage(
-            senderId: null,
-            data: data,
-            collapseKey: collapseKey,
-            messageId: messageId,
-            messageType: messageType,
-            ttl: null);
-
-        verify(kMockMessagingPlatform.sendMessage(
-            senderId: defaultSenderId,
-            data: data,
-            collapseKey: collapseKey,
-            messageId: messageId,
-            messageType: messageType,
-            ttl: null));
-      });
-
-      test('asserts [ttl] is more than 0 if not null', () {
-        expect(() => messaging.sendMessage(ttl: -1), throwsAssertionError);
-      });
-    });
     group('setAutoInitEnabled', () {
       test('verify delegate method is called with correct args', () async {
         when(kMockMessagingPlatform.setAutoInitEnabled(any))

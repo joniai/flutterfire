@@ -3,144 +3,166 @@
 // found in the LICENSE file.
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
-main() {
+import 'message.dart';
+import 'message_list.dart';
+import 'permissions.dart';
+import 'token_monitor.dart';
+
+/// Define a top-level named handler which background/terminated messages will
+/// call.
+///
+/// To verify things are working, check out the native platform logs.
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  // If you're going to use other Firebase services in the background, such as Firestore,
+  // make sure you call `initializeApp` before using other Firebase services.
+  await Firebase.initializeApp();
+  print("Handling a background message ${message.messageId}");
+}
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(MyApp());
+  await Firebase.initializeApp();
+
+  // Set the background messaging handler early on, as a named top-level function
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+  runApp(MessagingExampleApp());
 }
 
-// ignore: public_member_api_docs
-class MyApp extends StatefulWidget {
+/// Entry point for the example application.
+class MessagingExampleApp extends StatelessWidget {
   @override
-  _MyAppState createState() => _MyAppState();
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Messaging Example App',
+      theme: ThemeData.dark(),
+      routes: {
+        '/': (context) => Application(),
+        '/message': (context) => Message(),
+      },
+    );
+  }
 }
 
-class _MyAppState extends State<MyApp> {
-  Future<void> _initializeFlutterFireFuture;
-  FirebaseMessaging _messaging;
-  String _homeScreenText = "Waiting for token...";
-  final TextEditingController _topicController =
-      TextEditingController(text: 'topic');
+// Crude counter to make messages unique
+int _messageCount = 0;
 
-  bool _topicButtonsDisabled = false;
+/// The API endpoint here accepts a raw FCM payload for demonstration purposes.
+String constructFCMPayload(String token) {
+  _messageCount++;
+  return jsonEncode({
+    'token': token,
+    'data': {
+      'via': 'FlutterFire Cloud Messaging!!!',
+      'count': _messageCount.toString(),
+    },
+  });
+}
 
-  // Define an async function to initialize FlutterFire
-  Future<void> _initializeFlutterFire() async {
-    // FirebaseMessaging.configure(onMessage: (RemoteMessage message) async {
-    //   print("onMessage: $message");
-    // }, onBackgroundMessage: (RemoteMessage message) async {
-    //   print("onMessage: $message");
-    // });
+/// Renders the example application.
+class Application extends StatefulWidget {
+  @override
+  State<StatefulWidget> createState() => _Application();
+}
 
-    // Wait for Firebase to initialize
-    await Firebase.initializeApp();
-    _messaging = await FirebaseMessaging.instance;
-    await _messaging.getToken().then((String token) {
-      print('token $token');
-      assert(token != null);
-      setState(() {
-        _homeScreenText = "Push Messaging token: $token";
-      });
-    });
-
-    print('initial notification ${_messaging.initialNotification}');
-  }
+class _Application extends State<Application> {
+  String _token;
 
   @override
   void initState() {
     super.initState();
-    _initializeFlutterFireFuture = _initializeFlutterFire();
+    FirebaseMessaging.instance
+        .getInitialMessage()
+        .then((RemoteMessage message) {
+      if (message != null) {
+        Navigator.pushNamed(context, '/message',
+            arguments: MessageArguments(message, true));
+      }
+    });
+
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      Navigator.pushNamed(context, '/message',
+          arguments: MessageArguments(message, true));
+    });
+  }
+
+  Future<void> sendPushMessage() async {
+    if (_token == null) {
+      print('Unable to send FCM message, no token exists.');
+      return;
+    }
+
+    try {
+      await http.post(
+        'https://api.rnfirebase.io/messaging/send',
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: constructFCMPayload(_token),
+      );
+      print('FCM request for device sent!');
+    } catch (e) {
+      print(e);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      home: Scaffold(
-        appBar: AppBar(
-          title: const Text('Messaging example app'),
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("Cloud Messaging"),
+      ),
+      floatingActionButton: Builder(
+        builder: (context) => FloatingActionButton(
+          onPressed: () => sendPushMessage(),
+          child: Icon(Icons.send),
+          backgroundColor: Colors.white,
         ),
-        body: FutureBuilder(
-          future: _initializeFlutterFireFuture,
-          builder: (context, snapshot) {
-            switch (snapshot.connectionState) {
-              case ConnectionState.done:
-                if (snapshot.hasError) {
-                  return Center(
-                    child: Text('Error: ${snapshot.error}'),
-                  );
-                }
-                return Center(
-                  child: Column(
-                    children: <Widget>[
-                      Text(_homeScreenText),
-                      RaisedButton(
-                          child: const Text('isAutoInitEnabled'),
-                          onPressed: () {
-                            print(
-                                'Auto Init Enabled is ${_messaging.isAutoInitEnabled}');
-                          }),
-                      RaisedButton(
-                          child: const Text('setAutoInitEnabled'),
-                          onPressed: () async {
-                            var result = _messaging.isAutoInitEnabled;
-                            print(
-                                'Before: Setting Auto Init Enabled to ${!result}');
-                            await _messaging.setAutoInitEnabled(!result);
-                            print(
-                                'After: Auto Init Enabled is ${_messaging.isAutoInitEnabled}');
-                          }),
-                      Row(children: <Widget>[
-                        Expanded(
-                          child: TextField(
-                              controller: _topicController,
-                              onChanged: (String v) {
-                                setState(() {
-                                  _topicButtonsDisabled = v.isEmpty;
-                                });
-                              }),
-                        ),
-                        FlatButton(
-                          child: const Text("subscribe"),
-                          onPressed: _topicButtonsDisabled
-                              ? null
-                              : () {
-                                  _messaging
-                                      .subscribeToTopic(_topicController.text);
-                                  _clearTopicText();
-                                },
-                        ),
-                        FlatButton(
-                          child: const Text("unsubscribe"),
-                          onPressed: _topicButtonsDisabled
-                              ? null
-                              : () {
-                                  _messaging.unsubscribeFromTopic(
-                                      _topicController.text);
-                                  _clearTopicText();
-                                },
-                        ),
-                      ])
-                    ],
-                  ),
-                );
-                break;
-              default:
-                return Center(child: Text('Loading'));
-            }
-          },
-        ),
+      ),
+      body: SingleChildScrollView(
+        child: Column(children: [
+          MetaCard("Permissions", Permissions()),
+          MetaCard("FCM Token", TokenMonitor((token) {
+            _token = token;
+            return token == null
+                ? CircularProgressIndicator()
+                : Text(token, style: TextStyle(fontSize: 12));
+          })),
+          MetaCard("Message Stream", MessageList()),
+        ]),
       ),
     );
   }
+}
 
-  void _clearTopicText() {
-    setState(() {
-      _topicController.text = "";
-      _topicButtonsDisabled = true;
-    });
+/// UI Widget for displaying metadata.
+class MetaCard extends StatelessWidget {
+  final String _title;
+  final Widget _children;
+
+  // ignore: public_member_api_docs
+  MetaCard(this._title, this._children);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+        width: double.infinity,
+        margin: EdgeInsets.only(left: 8, right: 8, top: 8),
+        child: Card(
+            child: Padding(
+                padding: EdgeInsets.all(16),
+                child: Column(children: [
+                  Container(
+                      margin: EdgeInsets.only(bottom: 16),
+                      child: Text(_title, style: TextStyle(fontSize: 18))),
+                  _children,
+                ]))));
   }
 }
