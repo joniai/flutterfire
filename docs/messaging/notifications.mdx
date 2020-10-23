@@ -4,25 +4,22 @@ title: Notifications
 
 # Notifications
 
-Notifications are an important tool used on the majority of applications, used to improve user experience, used to engage users 
-with your application and much more. The Cloud Messaging module provides basic support for displaying and handling notifications.
+Notifications are an important tool used on the majority of applications, aimed at improve user experience & used to engage users
+with your application. The Cloud Messaging module provides basic support for displaying and handling notifications.
 
 ## Displaying notifications
 
-FCM sends data payloads to applications, however by default those payloads *may* be handled by the platform silently. In some cases,
-this is will meet your requirements, however a very common use-case for FCM is to be able to display a physical notification to your 
-users. These notifications may be purely for informational purposes (displaying text & images), or allow for user interaction.
+As mentioned in the [Usage](usage.mdx) documentation, message payloads can include a `notification` property which the Firebase SDKs
+intercept and attempt to display a visible notification to users.
 
-When the FCM package is installed, any incoming messages which contain a `notification` property with a correct schema will automatically
-cause a notification to be displayed. These automatically created notifications support text, images and basic interaction. If you wish
-to create complex notifications, read the [Advanced Usage](#advanced-usage) documentation.
+The default behaviour on both Android & iOS is to display a notification only when the app is in the background or terminated. If required,
+you can override this behaviour by following the [Foreground Notifications](#foreground-notifications) documentation.
 
-:::info
-By default on Android & iOS, notifications are only displayed to users if the application is in the background or terminated. You can override
-this functionality by reading the [Advanced Usage](#advanced-usage) documentation.
-:::
+FCM based notificiations provide the basics for many usecases, such as displaying text and images. They do not support advanced notifications
+such as actions, styling, foreground service notifications etc. To learn more, view the [Local Notifications](#local-notifications)
+documentation.
 
-There are a number of ways to send a FCM payload with a `notification` property. Below we outline the most common use-cases.
+The documentation below outlines a few different ways you can start to send notification based messages to your devices.
 
 ### Via Firebase Console
 
@@ -36,26 +33,24 @@ The [Firebase Console](https://console.firebase.google.com/project/_/notificatio
 - A/B test user interaction (called "experiments").
 - Test notifications on your development devices.
 
-The Firebase Console automatically sends a message to your devices containing a notification property which is handled by the Firebase Cloud Messaging package. 
+The Firebase Console automatically sends a message to your devices containing a notification property which is handled by the Firebase Cloud Messaging package.
 See [Handling Interaction](#handling-interaction) to learn about how to support user interaction.
 
 ### Via Admin SDKs
 
-Using one of the [various Firebase Admin SDKs](https://firebase.google.com/docs/reference/admin), you can send customised data payloads to your devices from your own servers. 
+Using one of the [various Firebase Admin SDKs](https://firebase.google.com/docs/reference/admin), you can send customised data payloads to your devices from your own servers.
 
 For example, when using the [`firebase-admin`] package in a Node.js environment to send messages from a server, a `notification` property can be added to the message payload:
 
 ```js
-const admin = require('firebase-admin');
+const admin = require("firebase-admin");
 
 await admin.messaging().sendMulticast({
-  tokens: [
-    'token_1', 'token_2',
-  ],
+  tokens: ["token_1", "token_2"],
   notification: {
-    title: 'Weather Warning!',
-    body: 'A new weather warning has been issued for your location.',
-    imageUrl: 'https://my-cdn.com/extreme-weather.png',
+    title: "Weather Warning!",
+    body: "A new weather warning has been issued for your location.",
+    imageUrl: "https://my-cdn.com/extreme-weather.png",
   },
 });
 ```
@@ -88,24 +83,127 @@ To learn more about the REST API, view the [Firebase documentation](https://fire
 
 ## Handling Interaction
 
-As mentioned above, by default on Android & iOS notifications are only displayed to users if the application is in the background or terminated. The default behaviour when
-a notification is pressed is to open your application.
+Since notifications are a visible cue, it is common for users to interact with it (by pressing them). The default behaviour on both Android & iOS is to open the
+application. If the application is terminated it will be started, if it is in the background it will be brought to the foreground.
 
-In most cases, you will want to hook onto this "open" event and perform some logic within your application. For example on a chat application, you'll want to open a specific
-conversation when a new message notification is pressed. The API provides two ways to handle interaction:
+Depending on the content of a notification, you may wish to handle the users interaction when the application opens. For example, if a new chat message is sent via
+a notification and the user presses it, you may want to open the specific conversation when the application opens.
 
-1. `getInitialNotification()`: If the application is opened from a terminated state a `Future` containing a `RemoteMessage` will be returned.
-2. `onNotificationOpenedApp`: A `Stream` which posts a `RemoteMessage` when the application is opened from a background state.
+The `firebase-messaging` package provides two ways to handle this interaction:
+
+1. `getInitialMessage()`: If the application is opened from a terminated state a `Future` containing a `RemoteMessage` will be returned. Once consumed, the `RemoteMessage` will be removed.
+2. `onMessageOpenedApp`: A `Stream` which posts a `RemoteMessage` when the application is opened from a background state.
 
 It is recommended that both scenarios are handled to ensure a smooth UX for your users. The code example below outlines how this can be achieved:
 
 ```dart
-TODO
+class Application extends StatefulWidget {
+  @override
+  State<StatefulWidget> createState() => _Application();
+}
+
+class _Application extends State<Application> {
+  @override
+  void initState() async {
+    super.initState();
+
+    // Get any messages which caused the application to open from
+    // a terminated state.
+    RemoteMessage initialMessage =
+        await FirebaseMessaging.instance.getInitialMessage();
+
+    // If the message also contains a data property with a "type" of "chat",
+    // navigate to a chat screen
+    if (initialMessage?.data['type'] == 'chat') {
+      Navigator.pushNamed(context, '/chat',
+          arguments: ChatArguments(initialMessage));
+    }
+
+    // Also handle any interaction when the app is in the background via a
+    // Stream listener
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      if (message.data['type'] == 'chat') {
+        Navigator.pushNamed(context, '/chat',
+          arguments: ChatArguments(initialMessage));
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Text("...");
+  }
+}
 ```
+
+How you handle interaction depends on your application setup, however the example above shows a basic example of using a StatefulWidget.
 
 ## Advanced Usage
 
+The below documentation outlines some advanced usage of notifications.
 
+### Foreground Notifications
+
+If your application is in the foreground & you wish for incoming messages containing a notification property to display a notification to users
+(called a "heads up" notification), some additional configuration is required. This configuration is different for Android & iOS.
+
+#### iOS Configuration
+
+For iOS, we need to alter the presentation options for incoming notifications. To do this, call the `setForegroundNotificationPresentationOptions` method:
+
+```dart
+await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
+  alert: true, // Required to display a heads up notification
+  badge: true,
+  sound: true,
+);
+```
+
+Set all values back to `false` to revert to the default functionality.
+
+#### Android configuration
+
+On Android, notification messages are sent to [Notification Channels](https://developer.android.com/guide/topics/ui/notifiers/notifications.html#ManageChannels)
+which are used to control how a notification is delivered. The default FCM channel used is hidden from users,
+however provides a "default" importance level. Heads up notifications require a "max" importance level.
+
+This means that we need to first create a new channel with an maximum importance level & then assign incoming FCM notifications to this channel. Although this is outside
+of the scope of FlutterFire, we can take advantage of the [flutter_local_notifications](https://pub.dev/packages/flutter_local_notifications) package to help us:
+
+1. Add the `flutter_local_notifications` package to your local project.
+2. Create a new `AndroidNotificationChannel` instance:
+```dart
+const AndroidNotificationChannel channel = AndroidNotificationChannel(
+  'max_importance_channel', // id
+  'High Importance Notifications', // title
+  'This channel is used for important notifications.', // description
+  importance: Importance.max,
+);
+```
+3. Create the channel on the device (if a channel with an id already exists, it will be updated):
+```dart
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
+
+await flutterLocalNotificationsPlugin
+  .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+  ?.createNotificationChannel(channel);
+```
+
+Once created, we can now update FCM to use our own channel rather than the default FCM one. To do this, open the 
+`android/app/src/main/AndroidManifest.xml` file for your FlutterProject project. Add the following `meta-data` 
+schema within the `application` block:
+
+```xml
+<meta-data
+  android:name="com.google.firebase.messaging.default_notification_channel_id"
+  android:value="max_importance_channel" />
+```
+
+View the [official documentation](https://firebase.google.com/docs/cloud-messaging/android/client#manifest) to learn more.
+
+Rebuild your application (`flutter run`) and incoming notification messages will now use your channel. Due to the "high"
+importance, this allows notifications to be dislayed in a heads up mode.
 
 
 

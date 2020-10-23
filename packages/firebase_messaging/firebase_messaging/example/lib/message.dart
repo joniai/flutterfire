@@ -15,7 +15,7 @@ class MessageArguments {
 }
 
 /// Displays information about a [RemoteMessage].
-class Message extends StatelessWidget {
+class MessageView extends StatelessWidget {
   /// A single data row.
   Widget row(String title, String value) {
     return Padding(
@@ -37,7 +37,8 @@ class Message extends StatelessWidget {
       appBar: AppBar(
         title: Text(message.messageId),
       ),
-      body: Padding(
+      body: SingleChildScrollView(
+          child: Padding(
         padding: const EdgeInsets.all(8.0),
         child: Column(children: [
           row("Triggered application open", args.openedApplication.toString()),
@@ -142,7 +143,7 @@ class Message extends StatelessWidget {
             )
           ]
         ]),
-      ),
+      )),
     );
   }
 }

@@ -12,6 +12,10 @@ There are also a number of prerequisites which are required to be able to enable
   - Firebase Cloud Messaging integrates with the [Apple Push Notification service (APNs)](https://developer.apple.com/notifications/),
     however APNs only works with real devices.
 
+:::caution
+Ensure you have followed the iOS setup documentation carefully! Missing a single step or misconfiguration will cause messages to not be delivered with little reasoning as to debug why.
+:::
+
 ## Configuring your app
 
 Before your application can start to receive messages, you must explicitly enable "Push Notifications" and "Background Modes"
@@ -99,7 +103,7 @@ application that you're developing.
 On the Apple Developer portal:
 
 1. Click the "Identifiers" side menu item.
-2. Click the plus button to register a App Identifier. 
+2. Click the plus button to register a App Identifier.
 3. Select the "App IDs" option and click "Continue".
 4. Select the "App" type option and click "Continue".
 
@@ -152,29 +156,67 @@ you must manually add the profile from the Apple Developer console:
 
 ![Xcode - Assign provisioning profile](ios-xcode-assign-provisioning-profile.png)
 
-## Allowing Notification Images
+## (Advanced) Allowing Notification Images
 
 > If you want to know more about the specifics of this setup read the [official Firebase docs](https://firebase.google.com/docs/cloud-messaging/ios/send-image).
 
 On Apple devices, in order for incoming [Notifications](notifications.mdx) to display images, you must add an additional notification
-service extension.
+service extension. This is not a required step.
 
 ### Step 1 - Add a notification service extension
 
-TODO
+- From Xcode top menu go to: **File > New > Target...**
+- A modal will present a list of possible targets, scroll down or use the filter to select "Notification Service Extension". Press Next.
+- Add a product name (use `ImageNotification` to follow along) and click **Finish**.
+- Enable the scheme by clicking **Activate**.
+
+![Xcode - Add a notification service extension](ios-notification-images-step-1.gif)
 
 ### Step 2 - Add target to the Podfile
 
+Ensure that your new extension has access to Firebase/Messaging pod by adding it in the Podfile:
+
+- From the Navigator open the Podfile: Pods > Podfile
+- Scroll down to the bottom of the file and add:
+```ruby
+target 'ImageNotification' do
+  pod 'Firebase/Messaging', '~> VERSION_NUMBER' # eg 6.31.0 
+end
+```
+- Make sure to change the version number `VERSION_NUMBER` with the currently installed version (check your `Podfile.lock`)
+- Install or update your pods using `pod install` from the /ios directory.
+
+![Xcode - Add target to the Podfile](ios-notification-images-step-2.gif)
+
 ### Step 3 - Use the extension helper
+
+At this point everything should still be running normally. This is the final step which is invoking the extension helper.
+
+- From the navigator select your `ImageNotification` extension
+- Open the `NotificationService.m` file
+- At the top of the file import `FirebaseMessaging.h` right after the `NotificationService.h` as shown below:
+```diff
+#import "NotificationService.h"
++ #import "FirebaseMessaging.h"
+```
+- Replace everything from line 25 to 28 with the extension helper:
+```diff
+- // Modify the notification content here...
+- self.bestAttemptContent.title = [NSString stringWithFormat:@"%@ [modified]", self.bestAttemptContent.title];
+    
+- self.contentHandler(self.bestAttemptContent);
++ [[FIRMessaging extensionHelper] populateNotificationContent:self.bestAttemptContent withContentHandler:contentHandler];
+```
+
+![Xcode - Use the extension helper](ios-notification-images-step-3.gif)
 
 ### Step 4
 
 Your device can now display images in a notification! Bear in mind, a 300KB max image size is enforced by the device.
-
 
 ## Next steps
 
 Once the above has been completed, you're ready to get started receiving messages on your iOS device for both
 testing and production.
 
-> Usage documentation will be available once the Firebase Firebase Cloud Messaging plugin update lands as part of the [FlutterFire roadmap](https://github.com/FirebaseExtended/flutterfire/issues/2582).
+View the [Usage documentation](usage.mdx) to get started.

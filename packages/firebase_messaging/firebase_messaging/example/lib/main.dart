@@ -9,6 +9,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'message.dart';
 import 'message_list.dart';
@@ -26,12 +27,43 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   print("Handling a background message ${message.messageId}");
 }
 
+/// Create a [AndroidNotificationChannel] for heads up notifications
+const AndroidNotificationChannel channel = AndroidNotificationChannel(
+  'high_importance_channel', // id
+  'High Importance Notifications', // title
+  'This channel is used for important notifications.', // description
+  importance: Importance.max,
+  enableVibration: true,
+  playSound: true,
+);
+
+/// Initalize the [FlutterLocalNotificationsPlugin] package.
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
 
   // Set the background messaging handler early on, as a named top-level function
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+  /// Create an Android Notification Channel.
+  ///
+  /// We use this channel in the `AndroidManifest.xml` file to override the
+  /// default FCM channel to enable heads up notifications.
+  await flutterLocalNotificationsPlugin
+      .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>()
+      ?.createNotificationChannel(channel);
+
+  /// Update the iOS foreground notification presentation options to allow
+  /// heads up notifications.
+  await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
+    alert: true,
+    badge: true,
+    sound: true,
+  );
 
   runApp(MessagingExampleApp());
 }
@@ -45,7 +77,7 @@ class MessagingExampleApp extends StatelessWidget {
       theme: ThemeData.dark(),
       routes: {
         '/': (context) => Application(),
-        '/message': (context) => Message(),
+        '/message': (context) => MessageView(),
       },
     );
   }
@@ -63,6 +95,10 @@ String constructFCMPayload(String token) {
       'via': 'FlutterFire Cloud Messaging!!!',
       'count': _messageCount.toString(),
     },
+    'notification': {
+      'title': 'Hello FlutterFire!',
+      'body': 'This notification was created via FCM!',
+    },
   });
 }
 
@@ -76,7 +112,7 @@ class _Application extends State<Application> {
   String _token;
 
   @override
-  void initState() {
+  void initState() async {
     super.initState();
     FirebaseMessaging.instance
         .getInitialMessage()
