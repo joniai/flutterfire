@@ -144,12 +144,15 @@ The below documentation outlines some advanced usage of notifications.
 
 ### Foreground Notifications
 
-If your application is in the foreground & you wish for incoming messages containing a notification property to display a notification to users
-(called a "heads up" notification), some additional configuration is required. This configuration is different for Android & iOS.
+Foreground notifications (also known as "heads up") are those which display for a brief period of time above existing applications, and should
+be used for important events.
+
+Android & iOS have different behaviours when handling notifications whilst applications are in the foreground so keep this in mind whilst developing.
 
 #### iOS Configuration
 
-For iOS, we need to alter the presentation options for incoming notifications. To do this, call the `setForegroundNotificationPresentationOptions` method:
+Enabling foreground notifications is generally a straightforward process. Call the `setForegroundNotificationPresentationOptions`
+method with named arguments:
 
 ```dart
 await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
@@ -163,6 +166,13 @@ Set all values back to `false` to revert to the default functionality.
 
 #### Android configuration
 
+Android handles incoming notifications differently based on a few different factors:
+
+1. If the application is in the background or terminated, the assigned "Notification Channel" is used to determine how the notification is displayed.
+2. If the application is currently in the foreground, a visible notification is not presented.
+
+##### Notification Channels
+
 On Android, notification messages are sent to [Notification Channels](https://developer.android.com/guide/topics/ui/notifiers/notifications.html#ManageChannels)
 which are used to control how a notification is delivered. The default FCM channel used is hidden from users,
 however provides a "default" importance level. Heads up notifications require a "max" importance level.
@@ -172,15 +182,18 @@ of the scope of FlutterFire, we can take advantage of the [flutter_local_notific
 
 1. Add the `flutter_local_notifications` package to your local project.
 2. Create a new `AndroidNotificationChannel` instance:
+
 ```dart
 const AndroidNotificationChannel channel = AndroidNotificationChannel(
-  'max_importance_channel', // id
+  'high_importance_channel', // id
   'High Importance Notifications', // title
   'This channel is used for important notifications.', // description
   importance: Importance.max,
 );
 ```
+
 3. Create the channel on the device (if a channel with an id already exists, it will be updated):
+
 ```dart
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
@@ -190,20 +203,48 @@ await flutterLocalNotificationsPlugin
   ?.createNotificationChannel(channel);
 ```
 
-Once created, we can now update FCM to use our own channel rather than the default FCM one. To do this, open the 
-`android/app/src/main/AndroidManifest.xml` file for your FlutterProject project. Add the following `meta-data` 
-schema within the `application` block:
+Once created, we can now update FCM to use our own channel rather than the default FCM one. To do this, open the
+`android/app/src/main/AndroidManifest.xml` file for your FlutterProject project. Add the following `meta-data`
+schema within the `application` component:
 
 ```xml
 <meta-data
   android:name="com.google.firebase.messaging.default_notification_channel_id"
-  android:value="max_importance_channel" />
+  android:value="high_importance_channel" />
 ```
 
 View the [official documentation](https://firebase.google.com/docs/cloud-messaging/android/client#manifest) to learn more.
 
-Rebuild your application (`flutter run`) and incoming notification messages will now use your channel. Due to the "high"
-importance, this allows notifications to be dislayed in a heads up mode.
+##### Application in foreground
 
+If your own application is in the foreground, the Firebase Android SDK will block displaying any FCM notification no matter what
+Notification Channel has been set. We can however still handle an incoming notification message via the `onMessage` stream and create
+a custom local notification using [`flutter_local_notifications`](https://pub.dev/packages/flutter_local_notifications):
 
+```dart
+FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+  RemoteNotification notification = message.notification;
+  AndroidNotification android = message.notification?.android;
 
+  // If `onMessage` is triggered with a notification, construct our own
+  // local notification to show to users using the created channel.
+  if (notification != null && android != null) {
+    flutterLocalNotificationsPlugin.show(
+        notification.hashCode,
+        notification.title,
+        notification.body,
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            channel.id,
+            channel.name,
+            channel.description,
+            icon: android?.smallIcon,
+            // other properties...
+          ),
+        ));
+  }
+});
+```
+
+To learn more about local notifications, view the [`flutter_local_notifications`](https://pub.dev/packages/flutter_local_notifications)
+documentation.

@@ -32,7 +32,7 @@ const AndroidNotificationChannel channel = AndroidNotificationChannel(
   'high_importance_channel', // id
   'High Importance Notifications', // title
   'This channel is used for important notifications.', // description
-  importance: Importance.max,
+  importance: Importance.high,
   enableVibration: true,
   playSound: true,
 );
@@ -97,7 +97,7 @@ String constructFCMPayload(String token) {
     },
     'notification': {
       'title': 'Hello FlutterFire!',
-      'body': 'This notification was created via FCM!',
+      'body': 'This notification (#$_messageCount) was created via FCM!',
     },
   });
 }
@@ -112,7 +112,7 @@ class _Application extends State<Application> {
   String _token;
 
   @override
-  void initState() async {
+  void initState() {
     super.initState();
     FirebaseMessaging.instance
         .getInitialMessage()
@@ -123,7 +123,28 @@ class _Application extends State<Application> {
       }
     });
 
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      RemoteNotification notification = message.notification;
+      AndroidNotification android = message.notification?.android;
+
+      if (notification != null && android != null) {
+        flutterLocalNotificationsPlugin.show(
+            notification.hashCode,
+            notification.title,
+            notification.body,
+            NotificationDetails(
+              android: AndroidNotificationDetails(
+                channel.id,
+                channel.name,
+                channel.description,
+                icon: android?.smallIcon,
+              ),
+            ));
+      }
+    });
+
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      print('A new onMessageOpenedApp event was published!');
       Navigator.pushNamed(context, '/message',
           arguments: MessageArguments(message, true));
     });
