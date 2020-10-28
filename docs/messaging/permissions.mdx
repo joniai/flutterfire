@@ -47,14 +47,14 @@ if (settings.authorizationStatus == AuthorizationStatus.authorized) {
 ```
 
 On Apple based platforms, once a permission request has been handled by the user (authorized or denied), it is not possible
-to re-request permission. The user must instead update permission via the device Settings UI (or a custom UI implementation):
+to re-request permission. The user must instead update permission via the device Settings UI:
 
-- If the user deined permission altogether, they must enable app permission fully.
+- If the user denied permission altogether, they must enable app permission fully.
 - If the user accepted requested permission (without sound), they must specifically enable the sound option themselves.
 
 ## Permission settings
 
-Although overall notification permission can be granted, the permissions can be further broken down into settings.
+Although overall notification permission can be granted, the permissions can be further broken down into 'settings'.
 
 Settings are used by the device to control notifications behavior, for example alerting the user with sound. When requesting
 permission, you can provide arguments if you wish to override the defaults. This is demonstrated in the above example.
@@ -93,7 +93,7 @@ NotificationSettings settings = await messaging.requestPermission(
 );
 ```
 
-When a notification is displayed on the device, the user will be presented with 2 action buttons, promoting to keep receiving 
+When a notification is displayed on the device, the user will be presented with several actions prompting to keep receiving
 notifications quietly, enable full notification permission or turn them off:
 
 ![iOS Provisional Notification Example](ios-provisional-notification.jpg)

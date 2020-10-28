@@ -73,7 +73,7 @@ class _Application extends State<Application> {
 }
 ```
 
-The above code snippet has a single purpose; storing the device FCM token on a remote database. When your application first initalizes, the
+The above code snippet has a single purpose; storing the device FCM token on a remote database. When your application first initializes, the
 users FCM token is fetched and stored in a database (Cloud Firestore in this example). If the token is refreshed at anypoint whilst your application
 is open, the new token is also stored on the database.
 
@@ -92,7 +92,7 @@ Each time a post is liked, we want to send a message to the user that uploaded t
 The code below simulates a function which is called with all of the information required when a picture is liked:
 
 ```js
-// Node.js
+// Node.js e.g via a Firebase Cloud Function
 var admin = require("firebase-admin");
 
 // ownerId - who owns the picture someone liked
@@ -153,6 +153,7 @@ When devices [subscribe to topics](usage.mdx#subscribing-to-topics), you can sen
 Using the `firebase-admin` Admin SDK as an example, we can send a message to devices subscribed to a topic:
 
 ```js
+// Node.js e.g via a Firebase Cloud Function
 const admin = require("firebase-admin");
 
 const message = {

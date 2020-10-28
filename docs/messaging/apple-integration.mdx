@@ -1,27 +1,27 @@
 ---
-title: iOS Messaging Integration
-sidebar_label: iOS Integration
-description: iOS requires additional configuration steps to be completed before you can receive messages.
+title: FCM via APNs Integration
+sidebar_label: Apple Integration
+description: iOS & macOS require additional configuration steps to be completed before you can receive messages.
 ---
 
-Integrating the Cloud Messaging plugin on iOS devices requires additional setup before your devices receive messages.
+:::caution
+This guide applies to both iOS & macOS Flutter apps, repeat each step for the platforms you require. E.g. if you support iOS & macOS then you will need to integrate twice, once per platform Xcode project.
+:::
+
+Integrating the Cloud Messaging plugin on iOS & macOS devices requires additional setup before your devices receive messages.
 There are also a number of prerequisites which are required to be able to enable messaging:
 
 - You must have an active [Apple Developer Account](https://developer.apple.com/membercenter/index.action).
-- You must have a physical iOS device to receive messages.
+- For iOS; you must have a physical iOS device to receive messages.
   - Firebase Cloud Messaging integrates with the [Apple Push Notification service (APNs)](https://developer.apple.com/notifications/),
     however APNs only works with real devices.
-
-:::caution
-Ensure you have followed the iOS setup documentation carefully! Missing a single step or misconfiguration will cause messages to not be delivered with little reasoning as to debug why.
-:::
 
 ## Configuring your app
 
 Before your application can start to receive messages, you must explicitly enable "Push Notifications" and "Background Modes"
 within Xcode.
 
-Open your project workspace file via Xcode (`/ios/Runner.xcworkspace`). Once open, follow the steps below:
+Open your project workspace file via Xcode (`/{ios|macos}/Runner.xcworkspace`). Once open, follow the steps below:
 
 1. Select your project.
 2. Select the project target.
@@ -42,7 +42,7 @@ Next the "Push Notifications" capability needs to be added to the project. This 
 Once selected, the capability will be shown below the other enabled capabilities. If no option appears when searching, the
 capability may already be enabled.
 
-### Enable Background Modes
+### Enable Background Modes (iOS only)
 
 Next the "Background Modes" capability needs to be enabled, along with both the "Background fetch" and "Remote notifications" sub-modes.
 This can be added via the "Capability" option on the "Signing & Capabilities" tab:
@@ -59,7 +59,7 @@ Now ensure that both the "Background fetch" and the "Remote notifications" sub-m
 
 ![Xcode - Enabling Background Modes](https://images.prismic.io/invertase/3a618574-dd9f-4478-9f39-9834d142b2e5_xcode-background-modes-check.gif?auto=compress,format)
 
-## Linking APNs with FCM (iOS)
+## Linking APNs with FCM
 
 > Note: APNs is required for both `foreground` and `background` messaging to function correctly on iOS.
 
@@ -131,7 +131,7 @@ A provisioning profile enables signed communicate between Apple and your applica
 real devices, a signed certificate ensures that the app being installed on a device is genuine and has the correct
 permissions enabled.
 
-On the "Profiles" menu item, register a new Profile. Select the "iOS App Development" checkbox and click "Continue".
+On the "Profiles" menu item, register a new Profile. Select the "iOS App Development" (or macOS) checkbox and click "Continue".
 
 If you followed [Step 2](#2-registering-an-app-identifier) correctly, your App Identifier will be available in the drop down
 provided:
@@ -150,17 +150,18 @@ real device (using Xcode). Back within Xcode, select your project target and sel
 If Xcode (via Preferences) is linked to your Apple Account, Xcode can automatically sync the profile created above. Otherwise,
 you must manually add the profile from the Apple Developer console:
 
-1. Select the project.
-2. Select the project target.
-3. Assign the provisioning profile.
+1. Select the project (usually called 'Runner') in the left hand side project navigator.
+2. Select the project target under the 'Targets' heading, usually called 'Runner'.
+3. Select the Signing & Capabilities tab.
+3. Assign the provisioning profile in the 'Signing' section.
 
 ![Xcode - Assign provisioning profile](ios-xcode-assign-provisioning-profile.png)
 
-## (Advanced) Allowing Notification Images
+## (Advanced, Optional) Allowing Notification Images
 
 > If you want to know more about the specifics of this setup read the [official Firebase docs](https://firebase.google.com/docs/cloud-messaging/ios/send-image).
 
-On Apple devices, in order for incoming [Notifications](notifications.mdx) to display images, you must add an additional notification
+On Apple devices, in order for incoming FCM [Notifications](notifications.mdx) to display images from the FCM payload, you must add an additional notification
 service extension. This is not a required step.
 
 ### Step 1 - Add a notification service extension
@@ -180,11 +181,11 @@ Ensure that your new extension has access to Firebase/Messaging pod by adding it
 - Scroll down to the bottom of the file and add:
 ```ruby
 target 'ImageNotification' do
-  pod 'Firebase/Messaging', '~> VERSION_NUMBER' # eg 6.31.0 
+  pod 'Firebase/Messaging'
 end
 ```
-- Make sure to change the version number `VERSION_NUMBER` with the currently installed version (check your `Podfile.lock`)
-- Install or update your pods using `pod install` from the /ios directory.
+
+- Install or update your pods using `pod install` from the `ios` and/or `macos` directory.
 
 ![Xcode - Add target to the Podfile](ios-notification-images-step-2.gif)
 
@@ -203,7 +204,7 @@ At this point everything should still be running normally. This is the final ste
 ```diff
 - // Modify the notification content here...
 - self.bestAttemptContent.title = [NSString stringWithFormat:@"%@ [modified]", self.bestAttemptContent.title];
-    
+
 - self.contentHandler(self.bestAttemptContent);
 + [[FIRMessaging extensionHelper] populateNotificationContent:self.bestAttemptContent withContentHandler:contentHandler];
 ```
@@ -212,11 +213,11 @@ At this point everything should still be running normally. This is the final ste
 
 ### Step 4
 
-Your device can now display images in a notification! Bear in mind, a 300KB max image size is enforced by the device.
+Your device can now display images in a notification by specifying the `imageUrl` option in your FCM payload. Keep in mind that a 300KB max image size is enforced by the device.
 
 ## Next steps
 
-Once the above has been completed, you're ready to get started receiving messages on your iOS device for both
+Once the above has been completed, you're ready to get started receiving messages on your iOS and/or macOS device for both
 testing and production.
 
 View the [Usage documentation](usage.mdx) to get started.

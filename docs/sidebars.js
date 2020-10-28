@@ -38,7 +38,7 @@ module.exports = {
     ],
     "Cloud Messaging": [
       "messaging/overview",
-      "messaging/ios-integration",
+      "messaging/apple-integration",
       "messaging/permissions",
       "messaging/notifications",
       "messaging/server-integration",
