@@ -191,7 +191,7 @@ and may cause the OS to terminate the process. If tasks run for longer than 60 s
 
 #### Notifications
 
-If your message is a notification one (includes a `notification` property), the Firebase SDKs will intercept this and display a visble
+If your message is a notification one (includes a `notification` property), the Firebase SDKs will intercept this and display a visible
 notification to your users (assuming you have requested permission & the user has notifications enabled). Once displayed, the
 background handler will be executed (if provided).
 
@@ -208,9 +208,9 @@ system logs, including those from Flutter. There is currently no way to debug wi
 
 As mentioned above, data only messages are classed as "low priority". Devices can (and probably will) ignore these messages if your
 application is in the background or terminated. You should not rely data only messages to be delivered, they should only be used to
-support your applications functionaly in non-critical functionality.
+support your applications non-critical functionality.
 
-To help improve delivery, you can bump the priority of messages. Note; this does still not guarentee delivery.
+To help improve delivery, you can bump the priority of messages. Note; this does still not guarantee delivery.
 
 For example, if using the `firebase-admin` NodeJS SDK package to send notifications via your server, add additional properties to the
 message payload:
@@ -219,7 +219,7 @@ message payload:
 const admin = require("firebase-admin");
 
 admin.initializeApp({
-  credential: admin.credential.cert(requre("./service-account-file.json")),
+  credential: admin.credential.cert(require("./service-account-file.json")),
   databaseURL: "https://....firebaseio.com",
 });
 
