@@ -11,7 +11,7 @@ To start using the Cloud Messaging package within your project, import it at the
 import 'package:cloud_messaging/cloud_messaging.dart';
 ```
 
-Before using Messaging, you must first have ensured you have [initialized FlutterFire](../overview.mdx#initializing-flutterfire).
+Before using Firebase Cloud Messaging, you must first have ensured you have [initialized FlutterFire](../overview.mdx#initializing-flutterfire).
 
 To create a new Messaging instance, call the [`instance`](!cloud_messaging.FirebaseMessaging.instance) getter on
 [`FirebaseMessaging`](!cloud_messaging.FirebaseMessaging):
@@ -20,7 +20,7 @@ To create a new Messaging instance, call the [`instance`](!cloud_messaging.Fireb
 FirebaseMessaging messaging = FirebaseMessaging.instance;
 ```
 
-Messaging currently only supports usage with the default Firebase App.
+Messaging currently only supports usage with the default Firebase App instance.
 
 ## Receiving messages
 
@@ -42,18 +42,19 @@ important to establish the various states a device can be in:
 | State          | Description                                                                                                                                                                                                                                      |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Foreground** | When the application is open, in view & in use.                                                                                                                                                                                                  |
-| **Background** | When the application is open, however in the background. This typically occurs when the user has pressed the "home" button on the device, has switched to another app via the app switcher or has the application open on a different tab (web). |
+| **Background** | When the application is open, however in the background (minimised). This typically occurs when the user has pressed the "home" button on the device, has switched to another app via the app switcher or has the application open on a different tab (web). |
 | **Terminated** | When the device is locked or the application is not running. The user can terminate an app by "swiping it away" via the app switcher UI on the device or closing a tab (web).                                                                    |
 
 There are a few preconditions which must be met before the application can receive message payloads via FCM:
 
 - The application must have opened at least once (to allow for registration with FCM).
-- On mobile, if the user force quits the application from device settings, it must be manually reopened again.
-- On iOS, you must have [correctly setup your project](ios-setup.mdx) to integrate with FCM.
+- On iOS, if the user swipes away the application from app Switcher, it must be manually reopened again for background messages to start working again.
+- On Android, if the user force quits the app from device settings, it must be manually reopened again for messages to start working.
+- On iOS & macOS, you must have [correctly setup your project](apple-integration.mdx) to integrate with FCM and APNs.
 
-### Requesting permission (iOS, Web)
+### Requesting permission (iOS)
 
-On iOS & web, before FCM payloads can be received on your device, you must first ask the users permission. Android applications are not required
+On iOS & Web (coming soon), before FCM payloads can be received on your device, you must first ask the users permission. Android applications are not required
 to request permission.
 
 The `firebase_messaging` package provides a simple API for requesting permission via the [`requestPermission`](!cloud_messaging.FirebaseMessaging.requestPermission) method.
@@ -100,13 +101,13 @@ For further information, view the [Permissions](permissions.mdx) documentation.
 ## Handling messages
 
 Once permission has been granted & the different types of device state have been understood, your application can now start to handle the incoming
-FCM payloads!
+FCM payloads.
 
-A single message payload can be viewed as one of three types:
+A message payload can be viewed as one of three types:
 
 1. Notification only message: The payload contains a `notification` property, which will be used to [present a visible notification to the user](notifications.mdx).
 2. Data only message: Also known as a "silent message", this payload contains custom key/value pairs within the `data` property which can be used how you see fit. These messages are considered "low priority" (more on this later).
-3. Notification & Data messages: Payloads with both a `notification` and `data` properties.
+3. Notification & Data messages: Payloads with both `notification` and `data` properties.
 
 Based on your applications current state, incoming payloads require different implementations to handle them:
 
@@ -123,11 +124,11 @@ ignored. You can however explicitly increase the priority by sending additional 
 - On Apple (iOS & MacOS), set the `content-available` field to `true`.
 
 Since the sending of FCM payloads is custom to your own setup, it is best to read the official [FCM API reference](https://firebase.google.com/docs/cloud-messaging/concept-options) for your chosen
-SDK.
+Firebase Admin SDK.
 
 ### Foreground messages
 
-To listen to messages whilst your application is in the foreground, hook onto the [`onMessage`](!cloud_messaging.FirebaseMessaging.onMessage) stream.
+To listen to messages whilst your application is in the foreground, listen to the [`onMessage`](!cloud_messaging.FirebaseMessaging.onMessage) stream.
 
 ```dart
 FirebaseMessaging.onMessage.listen((RemoteMessage message) {
@@ -165,7 +166,7 @@ isolate is spawned (Android only, iOS/macOS does not require a separate isolate)
 There are a few things to keep in mind about your background message handler:
 
 1. It must not be an anonymous function.
-2. It must be a top-level function (e.g. not a class method which requires initialisation).
+2. It must be a top-level function (e.g. not a class method which requires initialization).
 
 ```dart
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -187,7 +188,7 @@ application state or execute any UI impacting logic. You can however perform log
 (updating local storage), communicate with other plugins etc.
 
 It also also recommended to complete your logic as soon as possible. Running long intensive tasks impacts device performance
-and may cause the OS to terminate the process. If tasks run for longer than 60 seconds, the device may automatically kill the process.
+and may cause the OS to terminate the process. If tasks run for longer than 30 seconds, the device may automatically kill the process.
 
 #### Notifications
 
@@ -199,16 +200,20 @@ To learn about how to handle user interaction with a notification, view the [Not
 
 #### Debugging & Hot Reload
 
-Due to the differences in how Android & iOS handle background messages, debugging and hot reload works in Android only.
+FlutterFirebase Messaging does now support debugging and hot reloading for background isolates, but only if your main isolate is also being debugged,
+e.g. run your application in debug and then background it by switching apps so it's no longer in the foreground.
 
-On iOS, confirming the background handler has executed can be tricky. In general the "console.app" application on OSX displays
-system logs, including those from Flutter. There is currently no way to debug within the background handler on iOS.
+For viewing additional logs on iOS, the "console.app" application on your Mac also displays
+system logs for your iOS device, including those from Flutter.
 
 #### Low priority messages
 
-As mentioned above, data only messages are classed as "low priority". Devices can (and probably will) ignore these messages if your
-application is in the background or terminated. You should not rely data only messages to be delivered, they should only be used to
-support your applications non-critical functionality.
+As mentioned above, data only messages are classed as "low priority". Devices can throttle and ignore these messages if your
+application is in the background, terminated or a variety of other conditions such as low battery or currently high CPU usage.
+
+You should not rely data only messages to be delivered, they should only be used to
+support your applications non-critical functionality, e.g. pre-fetching data so the next time the user opens your app the
+data is ready to be displayed and if the message never gets delivered then your app still functions and fetches data on open.
 
 To help improve delivery, you can bump the priority of messages. Note; this does still not guarantee delivery.
 
@@ -249,13 +254,13 @@ admin.messaging().send({
 ```
 
 This configuration provides the best chance that your data-only message will be delivered to the device. You can read full
-descriptions on the use of the properties on the [official documentation](https://firebase.google.com/docs/reference/admin/node/TokenMessage).
+descriptions on the use of the properties on the [official Firebase documentation](https://firebase.google.com/docs/reference/admin/node/TokenMessage).
 
 Apple has very strict undisclosed polices on data only messages, and are very frequently ignored. For example sending too many in a certain time period
-will cause the device to block messages, or if battery consumption is high they will also be blocked.
+will cause the device to block messages, or if CPU consumption is high they will also be blocked.
 
 For Android you can view Logcat logs which will give a descriptive message on why a notification was not delivered. On Apple platforms the
-"console.app" application will display "CANCELED" logs for those it chose to ignore, however doesn't provide much description as to why.
+"console.app" application will display "CANCELED" logs for those it chose to ignore, however doesn't provide a description as to why.
 
 ## Topics
 
