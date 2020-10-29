@@ -45,7 +45,7 @@ public class FlutterFirebaseMessagingPlugin extends BroadcastReceiver
   private MethodChannel channel;
   private Activity mainActivity;
   private RemoteMessage initialMessage;
-  private HashMap<String, Boolean> consumedInitialMessages = new HashMap<>();
+  private final HashMap<String, Boolean> consumedInitialMessages = new HashMap<>();
 
   @SuppressWarnings("unused")
   public static void registerWith(Registrar registrar) {
@@ -94,6 +94,12 @@ public class FlutterFirebaseMessagingPlugin extends BroadcastReceiver
   public void onAttachedToActivity(ActivityPluginBinding binding) {
     binding.addOnNewIntentListener(this);
     this.mainActivity = binding.getActivity();
+    if (mainActivity.getIntent() != null &&  mainActivity.getIntent().getExtras() != null) {
+      if ((mainActivity.getIntent().getFlags() & Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY)
+        != Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) {
+        onNewIntent(mainActivity.getIntent());
+      }
+    }
   }
 
   @Override
