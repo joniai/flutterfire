@@ -1,3 +1,8 @@
+## 8.0.0-dev.2
+
+ - **FEAT**: bump firebase sdk version to 6.33.0.
+ - **DOCS**: typos.
+
 ## 8.0.0-dev.1
 
  - Changelog coming soon.
