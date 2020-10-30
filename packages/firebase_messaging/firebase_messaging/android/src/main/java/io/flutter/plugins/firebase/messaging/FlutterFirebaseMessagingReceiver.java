@@ -1,3 +1,7 @@
+// Copyright 2020 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 package io.flutter.plugins.firebase.messaging;
 
 import android.content.BroadcastReceiver;
@@ -24,21 +28,15 @@ public class FlutterFirebaseMessagingReceiver extends BroadcastReceiver {
     // Store the RemoteMessage if the message contains a notification payload.
     if (remoteMessage.getNotification() != null) {
       notifications.put(remoteMessage.getMessageId(), remoteMessage);
-      // TODO(Salakar) store message for reading in getInitialMessage when activities restart.
-      // TODO(Salakar) store message for reading in getInitialMessage when activities restart.
-      // TODO(Salakar) store message for reading in getInitialMessage when activities restart.
-      // TODO(Salakar) store message for reading in getInitialMessage when activities restart.
-      // TODO(Salakar) store message for reading in getInitialMessage when activities restart.
-      // TODO(Salakar) store message for reading in getInitialMessage when activities restart.
+      FlutterFirebaseMessagingStore.getInstance().storeFirebaseMessage(remoteMessage);
     }
 
     //  |-> ---------------------
     //      App in Foreground
     //   ------------------------
     if (FlutterFirebaseMessagingUtils.isApplicationForeground(context)) {
-      Intent onMessageIntent = new Intent(FlutterFirebaseMessagingConstants.ACTION_REMOTE_MESSAGE);
-      onMessageIntent.putExtra(
-          FlutterFirebaseMessagingConstants.EXTRA_REMOTE_MESSAGE, remoteMessage);
+      Intent onMessageIntent = new Intent(FlutterFirebaseMessagingUtils.ACTION_REMOTE_MESSAGE);
+      onMessageIntent.putExtra(FlutterFirebaseMessagingUtils.EXTRA_REMOTE_MESSAGE, remoteMessage);
       LocalBroadcastManager.getInstance(context).sendBroadcast(onMessageIntent);
       return;
     }
@@ -49,7 +47,7 @@ public class FlutterFirebaseMessagingReceiver extends BroadcastReceiver {
     Intent onBackgroundMessageIntent =
         new Intent(context, FlutterFirebaseMessagingBackgroundService.class);
     onBackgroundMessageIntent.putExtra(
-        FlutterFirebaseMessagingConstants.EXTRA_REMOTE_MESSAGE, remoteMessage);
+        FlutterFirebaseMessagingUtils.EXTRA_REMOTE_MESSAGE, remoteMessage);
     FlutterFirebaseMessagingBackgroundService.enqueueMessageProcessing(
         context, onBackgroundMessageIntent);
   }

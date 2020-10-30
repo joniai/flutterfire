@@ -1,4 +1,4 @@
-// Copyright 2019 The Chromium Authors. All rights reserved.
+// Copyright 2020 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -68,7 +68,7 @@ public class FlutterFirebaseMessagingBackgroundExecutor implements MethodCallHan
   public static void setCallbackDispatcher(long callbackHandle) {
     Context context = ContextHolder.getApplicationContext();
     SharedPreferences prefs =
-        context.getSharedPreferences(FlutterFirebaseMessagingConstants.SHARED_PREFERENCES_KEY, 0);
+        context.getSharedPreferences(FlutterFirebaseMessagingUtils.SHARED_PREFERENCES_KEY, 0);
     prefs.edit().putLong(CALLBACK_HANDLE_KEY, callbackHandle).apply();
   }
 
@@ -236,7 +236,7 @@ public class FlutterFirebaseMessagingBackgroundExecutor implements MethodCallHan
 
     // Handle the message event in Dart.
     RemoteMessage remoteMessage =
-        intent.getParcelableExtra(FlutterFirebaseMessagingConstants.EXTRA_REMOTE_MESSAGE);
+        intent.getParcelableExtra(FlutterFirebaseMessagingUtils.EXTRA_REMOTE_MESSAGE);
     if (remoteMessage != null) {
       Map<String, Object> remoteMessageMap =
           FlutterFirebaseMessagingUtils.remoteMessageToMap(remoteMessage);
@@ -260,7 +260,7 @@ public class FlutterFirebaseMessagingBackgroundExecutor implements MethodCallHan
   private long getUserCallbackHandle() {
     SharedPreferences prefs =
         ContextHolder.getApplicationContext()
-            .getSharedPreferences(FlutterFirebaseMessagingConstants.SHARED_PREFERENCES_KEY, 0);
+            .getSharedPreferences(FlutterFirebaseMessagingUtils.SHARED_PREFERENCES_KEY, 0);
     return prefs.getLong(USER_CALLBACK_HANDLE_KEY, 0);
   }
 
@@ -268,7 +268,7 @@ public class FlutterFirebaseMessagingBackgroundExecutor implements MethodCallHan
   private long getPluginCallbackHandle() {
     SharedPreferences prefs =
         ContextHolder.getApplicationContext()
-            .getSharedPreferences(FlutterFirebaseMessagingConstants.SHARED_PREFERENCES_KEY, 0);
+            .getSharedPreferences(FlutterFirebaseMessagingUtils.SHARED_PREFERENCES_KEY, 0);
     return prefs.getLong(CALLBACK_HANDLE_KEY, 0);
   }
 
@@ -279,7 +279,7 @@ public class FlutterFirebaseMessagingBackgroundExecutor implements MethodCallHan
   public static void setUserCallbackHandle(long callbackHandle) {
     Context context = ContextHolder.getApplicationContext();
     SharedPreferences prefs =
-        context.getSharedPreferences(FlutterFirebaseMessagingConstants.SHARED_PREFERENCES_KEY, 0);
+        context.getSharedPreferences(FlutterFirebaseMessagingUtils.SHARED_PREFERENCES_KEY, 0);
     prefs.edit().putLong(USER_CALLBACK_HANDLE_KEY, callbackHandle).apply();
   }
 

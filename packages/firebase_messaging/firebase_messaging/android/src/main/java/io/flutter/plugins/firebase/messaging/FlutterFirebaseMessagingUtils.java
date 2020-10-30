@@ -1,3 +1,7 @@
+// Copyright 2020 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 package io.flutter.plugins.firebase.messaging;
 
 import android.app.ActivityManager;
@@ -12,6 +16,13 @@ import java.util.Objects;
 import java.util.Set;
 
 class FlutterFirebaseMessagingUtils {
+  static final String IS_AUTO_INIT_ENABLED = "isAutoInitEnabled";
+  static final String SHARED_PREFERENCES_KEY = "io.flutter.firebase.messaging.callback";
+  static final String ACTION_REMOTE_MESSAGE = "io.flutter.plugins.firebase.messaging.NOTIFICATION";
+  static final String EXTRA_REMOTE_MESSAGE = "notification";
+  static final String ACTION_TOKEN = "io.flutter.plugins.firebase.messaging.TOKEN";
+  static final String EXTRA_TOKEN = "token";
+  static final int JOB_ID = 2020;
   private static final String KEY_COLLAPSE_KEY = "collapseKey";
   private static final String KEY_DATA = "data";
   private static final String KEY_FROM = "from";
@@ -194,7 +205,7 @@ class FlutterFirebaseMessagingUtils {
     Map<String, Object> messageMap =
         (Map<String, Object>) Objects.requireNonNull(arguments.get("message"));
 
-    String to = (String) Objects.requireNonNull(messageMap.get("senderId"));
+    String to = (String) Objects.requireNonNull(messageMap.get("to"));
     RemoteMessage.Builder builder = new RemoteMessage.Builder(to);
 
     String collapseKey = (String) messageMap.get("collapseKey");
@@ -210,7 +221,7 @@ class FlutterFirebaseMessagingUtils {
     }
 
     if (messageType != null) {
-      builder.setMessageId(messageId);
+      builder.setMessageType(messageType);
     }
 
     if (messageId != null) {
