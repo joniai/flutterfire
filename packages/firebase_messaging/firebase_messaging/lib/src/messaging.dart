@@ -268,7 +268,7 @@ class FirebaseMessaging extends FirebasePluginPlatform {
     String messageType,
     int ttl,
   }) {
-    assert(to == null);
+    assert(to != null);
     if (ttl != null) {
       assert(ttl >= 0);
     }
