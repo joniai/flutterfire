@@ -273,7 +273,7 @@ class FirebaseMessaging extends FirebasePluginPlatform {
       assert(ttl >= 0);
     }
     return _delegate.sendMessage(
-      to: to ?? '${app.options.messagingSenderId}@fcm.googleapis.com',
+      senderId: to ?? '${app.options.messagingSenderId}@fcm.googleapis.com',
       data: data,
       collapseKey: collapseKey,
       messageId: messageId,
