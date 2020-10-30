@@ -20,7 +20,9 @@ class RemoteMessage {
       this.notification,
       this.sentTime,
       this.threadId,
-      this.ttl});
+      this.ttl,
+      this.type,
+      this.convoId});
 
   /// Constructs a [RemoteMessage] from a raw Map.
   factory RemoteMessage.fromMap(Map<String, dynamic> map) {
@@ -44,8 +46,14 @@ class RemoteMessage {
           : DateTime.fromMillisecondsSinceEpoch(map['sentTime']),
       threadId: map['threadId'],
       ttl: map['ttl'],
+      type: map['type'] ?? '',
+      convoId: map['convoId'] ?? '',
     );
   }
+
+  final String type;
+
+  final String convoId;
 
   /// The ID of the upstream sender location.
   final String senderId;
