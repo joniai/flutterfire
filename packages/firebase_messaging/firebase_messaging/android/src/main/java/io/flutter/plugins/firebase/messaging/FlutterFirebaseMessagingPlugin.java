@@ -1,4 +1,4 @@
-// Copyright 2017 The Chromium Authors. All rights reserved.
+// Copyright 2020 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -12,10 +12,13 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
 import com.google.firebase.FirebaseApp;
+import com.google.firebase.iid.FirebaseInstanceId;
+import com.google.firebase.iid.Metadata;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.RemoteMessage;
 import io.flutter.embedding.engine.FlutterShellArgs;
@@ -42,10 +45,10 @@ public class FlutterFirebaseMessagingPlugin extends BroadcastReceiver
         FlutterPlugin,
         ActivityAware {
 
+  private final HashMap<String, Boolean> consumedInitialMessages = new HashMap<>();
   private MethodChannel channel;
   private Activity mainActivity;
   private RemoteMessage initialMessage;
-  private final HashMap<String, Boolean> consumedInitialMessages = new HashMap<>();
 
   @SuppressWarnings("unused")
   public static void registerWith(Registrar registrar) {
@@ -62,8 +65,8 @@ public class FlutterFirebaseMessagingPlugin extends BroadcastReceiver
 
     // Register broadcast receiver
     IntentFilter intentFilter = new IntentFilter();
-    intentFilter.addAction(FlutterFirebaseMessagingConstants.ACTION_TOKEN);
-    intentFilter.addAction(FlutterFirebaseMessagingConstants.ACTION_REMOTE_MESSAGE);
+    intentFilter.addAction(FlutterFirebaseMessagingUtils.ACTION_TOKEN);
+    intentFilter.addAction(FlutterFirebaseMessagingUtils.ACTION_REMOTE_MESSAGE);
     LocalBroadcastManager manager =
         LocalBroadcastManager.getInstance(ContextHolder.getApplicationContext());
     manager.registerReceiver(this, intentFilter);
@@ -94,9 +97,9 @@ public class FlutterFirebaseMessagingPlugin extends BroadcastReceiver
   public void onAttachedToActivity(ActivityPluginBinding binding) {
     binding.addOnNewIntentListener(this);
     this.mainActivity = binding.getActivity();
-    if (mainActivity.getIntent() != null &&  mainActivity.getIntent().getExtras() != null) {
+    if (mainActivity.getIntent() != null && mainActivity.getIntent().getExtras() != null) {
       if ((mainActivity.getIntent().getFlags() & Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY)
-        != Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) {
+          != Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) {
         onNewIntent(mainActivity.getIntent());
       }
     }
@@ -127,12 +130,12 @@ public class FlutterFirebaseMessagingPlugin extends BroadcastReceiver
       return;
     }
 
-    if (action.equals(FlutterFirebaseMessagingConstants.ACTION_TOKEN)) {
-      String token = intent.getStringExtra(FlutterFirebaseMessagingConstants.EXTRA_TOKEN);
+    if (action.equals(FlutterFirebaseMessagingUtils.ACTION_TOKEN)) {
+      String token = intent.getStringExtra(FlutterFirebaseMessagingUtils.EXTRA_TOKEN);
       channel.invokeMethod("Messaging#onTokenRefresh", token);
-    } else if (action.equals(FlutterFirebaseMessagingConstants.ACTION_REMOTE_MESSAGE)) {
+    } else if (action.equals(FlutterFirebaseMessagingUtils.ACTION_REMOTE_MESSAGE)) {
       RemoteMessage message =
-          intent.getParcelableExtra(FlutterFirebaseMessagingConstants.EXTRA_REMOTE_MESSAGE);
+          intent.getParcelableExtra(FlutterFirebaseMessagingUtils.EXTRA_REMOTE_MESSAGE);
       if (message == null) return;
       Map<String, Object> content = FlutterFirebaseMessagingUtils.remoteMessageToMap(message);
       channel.invokeMethod("Messaging#onMessage", content);
@@ -143,9 +146,11 @@ public class FlutterFirebaseMessagingPlugin extends BroadcastReceiver
     return Tasks.call(
         cachedThreadPool,
         () -> {
-          FirebaseMessaging firebaseMessaging =
-              FlutterFirebaseMessagingUtils.getFirebaseMessagingForArguments(arguments);
-          Tasks.await(firebaseMessaging.deleteToken());
+          String senderId =
+              arguments.get("senderId") != null
+                  ? (String) arguments.get("senderId")
+                  : Metadata.getDefaultSenderId(FirebaseApp.getInstance());
+          FirebaseInstanceId.getInstance().deleteToken(senderId, "*");
           return null;
         });
   }
@@ -154,9 +159,11 @@ public class FlutterFirebaseMessagingPlugin extends BroadcastReceiver
     return Tasks.call(
         cachedThreadPool,
         () -> {
-          FirebaseMessaging firebaseMessaging =
-              FlutterFirebaseMessagingUtils.getFirebaseMessagingForArguments(arguments);
-          return Tasks.await(firebaseMessaging.getToken());
+          String senderId =
+              arguments.get("senderId") != null
+                  ? (String) arguments.get("senderId")
+                  : Metadata.getDefaultSenderId(FirebaseApp.getInstance());
+          return FirebaseInstanceId.getInstance().getToken(senderId, "*");
         });
   }
 
@@ -208,7 +215,7 @@ public class FlutterFirebaseMessagingPlugin extends BroadcastReceiver
           return new HashMap<String, Object>() {
             {
               put(
-                  FlutterFirebaseMessagingConstants.IS_AUTO_INIT_ENABLED,
+                  FlutterFirebaseMessagingUtils.IS_AUTO_INIT_ENABLED,
                   firebaseMessaging.isAutoInitEnabled());
             }
           };
@@ -248,13 +255,11 @@ public class FlutterFirebaseMessagingPlugin extends BroadcastReceiver
           RemoteMessage remoteMessage =
               FlutterFirebaseMessagingReceiver.notifications.get(messageId);
 
-          // If we can't find a copy of the remote message in memory then check from our temporary store.
+          // If we can't find a copy of the remote message in memory then check from our persisted store.
           if (remoteMessage == null) {
-            // TODO(Salakar) read from persisted notifications.
-            // TODO(Salakar) read from persisted notifications.
-            // TODO(Salakar) read from persisted notifications.
-            // TODO(Salakar) read from persisted notifications.
-            // TODO(Salakar) read from persisted notifications.
+            remoteMessage =
+                FlutterFirebaseMessagingStore.getInstance().getFirebaseMessage(messageId);
+            FlutterFirebaseMessagingStore.getInstance().removeFirebaseMessage(messageId);
           }
 
           if (remoteMessage == null) {
@@ -335,14 +340,15 @@ public class FlutterFirebaseMessagingPlugin extends BroadcastReceiver
         });
   }
 
-  private Map<String, Object> getExceptionDetails(Exception exception) {
+  private Map<String, Object> getExceptionDetails(@Nullable Exception exception) {
     Map<String, Object> details = new HashMap<>();
-    // TODO implement
-    // TODO implement
-    // TODO implement
-    // TODO implement
-    // TODO implement
-    // TODO implement
+    details.put("code", "unknown");
+    if (exception != null) {
+      details.put("message", exception.getMessage());
+    } else {
+      details.put("message", "An unknown error has occurred.");
+    }
+    details.put("additionalData", new HashMap<>());
     return details;
   }
 
@@ -360,6 +366,13 @@ public class FlutterFirebaseMessagingPlugin extends BroadcastReceiver
     }
 
     RemoteMessage remoteMessage = FlutterFirebaseMessagingReceiver.notifications.get(messageId);
+
+    // If we can't find a copy of the remote message in memory then check from our persisted store.
+    if (remoteMessage == null) {
+      remoteMessage = FlutterFirebaseMessagingStore.getInstance().getFirebaseMessage(messageId);
+      // Note we don't remove it here as the user may still call getInitialMessage.
+    }
+
     if (remoteMessage == null) {
       return false;
     }

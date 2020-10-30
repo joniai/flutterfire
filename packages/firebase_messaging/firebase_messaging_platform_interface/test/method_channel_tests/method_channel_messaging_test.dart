@@ -20,19 +20,6 @@ void main() {
   FirebaseMessagingPlatform messaging;
   final List<MethodCall> log = <MethodCall>[];
 
-  Map<String, dynamic> kMockNotification = {
-    'android': {
-      'channelId': 'foo',
-      'count': 1,
-      'priority': 1,
-    },
-    'ios': {
-      'subtitle': 'bar',
-    },
-    'title': 'test notification',
-    'body': 'this is a test notification'
-  };
-
   group('$MethodChannelFirebaseMessaging', () {
     setUpAll(() async {
       app = await Firebase.initializeApp();

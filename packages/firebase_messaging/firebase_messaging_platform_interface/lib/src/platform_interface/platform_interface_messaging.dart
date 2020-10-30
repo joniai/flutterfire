@@ -4,8 +4,8 @@
 
 import 'dart:async';
 
-import 'package:firebase_messaging_platform_interface/firebase_messaging_platform_interface.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging_platform_interface/firebase_messaging_platform_interface.dart';
 import 'package:meta/meta.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
@@ -156,7 +156,9 @@ abstract class FirebaseMessagingPlatform extends PlatformInterface {
   /// Removes access to an FCM token previously authorized with optional [senderId].
   ///
   /// Messages sent by the server to this token will fail.
-  Future<void> deleteToken() {
+  Future<void> deleteToken({
+    String senderId,
+  }) {
     throw UnimplementedError('deleteToken() is not implemented');
   }
 
@@ -168,6 +170,7 @@ abstract class FirebaseMessagingPlatform extends PlatformInterface {
 
   /// Returns the default FCM token for this device and optionally [senderId].
   Future<String> getToken({
+    String senderId,
     String vapidKey,
   }) {
     throw UnimplementedError('getToken() is not implemented');
@@ -281,7 +284,7 @@ abstract class FirebaseMessagingPlatform extends PlatformInterface {
 
   /// Send a new [RemoteMessage] to the FCM server.
   Future<void> sendMessage({
-    String senderId,
+    String to,
     Map<String, String> data,
     String collapseKey,
     String messageId,

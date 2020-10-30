@@ -259,21 +259,21 @@ class FirebaseMessaging extends FirebasePluginPlatform {
         status == AuthorizationStatus.provisional;
   }
 
-  /// Send a new [RemoteMessage] to the FCM server.
+  /// Send a new [RemoteMessage] to the FCM server. Android only.
   Future<void> sendMessage({
-    String senderId,
+    String to,
     Map<String, String> data,
     String collapseKey,
     String messageId,
     String messageType,
     int ttl,
   }) {
+    assert(to == null);
     if (ttl != null) {
       assert(ttl >= 0);
     }
     return _delegate.sendMessage(
-      senderId:
-          senderId ?? '${app.options.messagingSenderId}@fcm.googleapis.com',
+      to: to ?? '${app.options.messagingSenderId}@fcm.googleapis.com',
       data: data,
       collapseKey: collapseKey,
       messageId: messageId,

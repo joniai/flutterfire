@@ -184,10 +184,12 @@ class MethodChannelFirebaseMessaging extends FirebaseMessagingPlatform {
   }
 
   @override
-  Future<void> deleteToken() async {
+  Future<void> deleteToken({
+    String senderId,
+  }) async {
     try {
-      await channel
-          .invokeMethod<String>('Messaging#deleteToken', {'appName': app.name});
+      await channel.invokeMethod<String>(
+          'Messaging#deleteToken', {'appName': app.name, 'senderId': senderId});
     } catch (e) {
       throw convertPlatformException(e);
     }
@@ -211,11 +213,13 @@ class MethodChannelFirebaseMessaging extends FirebaseMessagingPlatform {
 
   @override
   Future<String> getToken({
-    String vapidKey, // not used; web property
+    String senderId,
+    String vapidKey, // not used yet; web only property
   }) async {
     try {
       return await channel.invokeMethod<String>('Messaging#getToken', {
         'appName': app.name,
+        'senderId': senderId,
       });
     } catch (e) {
       throw convertPlatformException(e);
@@ -319,8 +323,9 @@ class MethodChannelFirebaseMessaging extends FirebaseMessagingPlatform {
     }
   }
 
+  @override
   Future<void> sendMessage({
-    String senderId,
+    String to,
     Map<String, String> data,
     String collapseKey,
     String messageId,
@@ -329,13 +334,13 @@ class MethodChannelFirebaseMessaging extends FirebaseMessagingPlatform {
   }) async {
     if (defaultTargetPlatform != TargetPlatform.android) {
       throw UnimplementedError(
-          "Sending of messages from the Firebase Messaging SDK is only supported on Android devices");
+          "Sending of messages from the Firebase Messaging SDK is only supported on Android devices.");
     }
 
     try {
       await channel.invokeMethod('Messaging#sendMessage', {
         'appName': app.name,
-        'senderId': senderId,
+        'to': to,
         'data': data,
         'collapseKey': collapseKey,
         'messageId': messageId,
