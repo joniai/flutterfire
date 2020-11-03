@@ -35,24 +35,25 @@ class FirebaseMessaging extends FirebasePluginPlatform {
   /// Returns an instance using a specified [FirebaseApp]
   ///
   /// If [app] is not provided, the default Firebase app will be used.
-  static FirebaseMessaging instanceFor({
-    FirebaseApp app,
-  }) {
-    app ??= Firebase.app();
-    assert(app != null);
-
-    String key = '${app.name}';
-    if (_cachedInstances.containsKey(key)) {
-      return _cachedInstances[key];
-    }
-
-    FirebaseMessaging newInstance = FirebaseMessaging._(app: app);
-    _cachedInstances[key] = newInstance;
-
-    return newInstance;
-  }
-
-  static final Map<String, FirebaseMessaging> _cachedInstances = {};
+  // TODO: messaging does not yet support multiple Firebase Apps. Default app only.
+  // static FirebaseMessaging instanceFor({
+  //   FirebaseApp app,
+  // }) {
+  //   app ??= Firebase.app();
+  //   assert(app != null);
+  //
+  //   String key = '${app.name}';
+  //   if (_cachedInstances.containsKey(key)) {
+  //     return _cachedInstances[key];
+  //   }
+  //
+  //   FirebaseMessaging newInstance = FirebaseMessaging._(app: app);
+  //   _cachedInstances[key] = newInstance;
+  //
+  //   return newInstance;
+  // }
+  //
+  // static final Map<String, FirebaseMessaging> _cachedInstances = {};
 
   /// Returns a Stream that is called when an incoming FCM payload is received whilst
   /// the Flutter instance is in the foreground.
@@ -167,23 +168,22 @@ class FirebaseMessaging extends FirebasePluginPlatform {
 
   /// Prompts the user for notification permissions.
   ///
-  /// On iOS, a dialog is shown requesting the users permission.
-  /// If [provisional] is set to `true`, silent notification permissions will be
+  ///  - On iOS, a dialog is shown requesting the users permission.
+  ///  - On macOS, a notification will appear asking to grant permission.
+  ///  - On Android, is it not required to call this method. If called however,
+  ///    a [NotificationSettings] class will be returned with
+  ///    [NotificationSettings.authorizationStatus] returning
+  ///    [AuthorizationStatus.authorized].
+  ///  - On Web, a popup requesting the users permission is shown using the native browser API.
+  ///
+  /// Note that on iOS, if [provisional] is set to `true`, silent notification permissions will be
   /// automatically granted. When notifications are delivered to the device, the
   /// user will be presented with an option to disable notifications, keep receiving
   /// them silently or enable prominent notifications.
-  ///
-  /// On Android, is it not required to call this method. If called however,
-  /// a [NotificationSettings] class will be returned with
-  /// [NotificationSettings.authorizationStatus] returning
-  /// [AuthorizationStatus.authorized].
-  ///
-  /// On Web, a popup requesting the users permission is shown using the native
-  /// browser API.
   Future<NotificationSettings> requestPermission({
     /// Request permission to display alerts. Defaults to `true`.
     ///
-    /// iOS only.
+    /// iOS/macOS only.
     bool alert = true,
 
     /// Request permission for Siri to automatically read out notification messages over AirPods.
@@ -194,7 +194,7 @@ class FirebaseMessaging extends FirebasePluginPlatform {
 
     /// Request permission to update the application badge. Defaults to `true`.
     ///
-    /// iOS only.
+    /// iOS/macOS only.
     bool badge = true,
 
     /// Request permission to display notifications in a CarPlay environment.
@@ -220,7 +220,7 @@ class FirebaseMessaging extends FirebasePluginPlatform {
 
     /// Request permission to play sounds. Defaults to `true`.
     ///
-    /// iOS only.
+    /// iOS/macOS only.
     bool sound = true,
   }) {
     return _delegate.requestPermission(

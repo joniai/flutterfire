@@ -17,24 +17,12 @@ import './mock.dart';
 void main() {
   setupFirebaseMessagingMocks();
   FirebaseMessaging messaging;
-  FirebaseMessaging secondaryMessaging;
-  FirebaseApp secondaryApp;
 
   group('$FirebaseMessaging', () {
     setUpAll(() async {
+      await Firebase.initializeApp();
       FirebaseMessagingPlatform.instance = kMockMessagingPlatform;
-
-      secondaryApp = await Firebase.initializeApp(
-          name: 'foo',
-          options: FirebaseOptions(
-            apiKey: '123',
-            appId: '123',
-            messagingSenderId: '123',
-            projectId: '123',
-          ));
-
       messaging = FirebaseMessaging.instance;
-      secondaryMessaging = FirebaseMessaging.instanceFor(app: secondaryApp);
     });
     group('instance', () {
       test('returns an instance', () async {
@@ -46,18 +34,6 @@ void main() {
         expect(messaging.app.name, defaultFirebaseAppName);
       });
     });
-
-    group('instanceFor()', () {
-      test('returns an instance', () async {
-        expect(secondaryMessaging, isA<FirebaseMessaging>());
-      });
-
-      test('returns the correct $FirebaseApp', () {
-        expect(secondaryMessaging.app, isA<FirebaseApp>());
-        expect(secondaryMessaging.app.name, secondaryApp.name);
-      });
-    });
-
 
     group('get.isAutoInitEnabled', () {
       test('verify delegate method is called', () {
@@ -84,7 +60,7 @@ void main() {
         const senderId = 'test-notification';
         RemoteMessage message = RemoteMessage(senderId: senderId);
         when(kMockMessagingPlatform.getInitialMessage())
-            .thenReturn(Future.value(message));
+            .thenAnswer((_) => Future.value(message));
 
         final result = await messaging.getInitialMessage();
 
@@ -97,7 +73,8 @@ void main() {
 
     group('deleteToken', () {
       test('verify delegate method is called with correct args', () async {
-        when(kMockMessagingPlatform.deleteToken()).thenReturn(null);
+        when(kMockMessagingPlatform.deleteToken())
+            .thenAnswer((_) => Future.value(null));
 
         await messaging.deleteToken();
 
