@@ -33,6 +33,13 @@ dev_dependencies:
   plugin_platform_interface: ^1.0.2
   async: ^2.4.2 
 
+dependency_overrides:
+  firebase_messaging_platform_interface:
+    git:
+      url: https://github.com/joniai/flutterfire.git
+      ref: firebase_messaging_v1
+      path: packages/firebase_messaging/firebase_messaging_platform_interface
+
 environment:
   sdk: ">=2.1.0 <3.0.0"
   flutter: ">=1.12.13+hotfix.5 <2.0.0"
