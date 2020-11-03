@@ -58,7 +58,6 @@ void main() {
       });
     });
 
-    group('configure', () {});
 
     group('get.isAutoInitEnabled', () {
       test('verify delegate method is called', () {
@@ -223,7 +222,6 @@ void main() {
         expect(() => messaging.setAutoInitEnabled(null), throwsAssertionError);
       });
     });
-    // group('onIosSettingsRegistered', () {});
     group('subscribeToTopic', () {
       setUpAll(() {
         when(kMockMessagingPlatform.subscribeToTopic(any))
